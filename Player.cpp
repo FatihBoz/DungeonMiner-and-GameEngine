@@ -86,6 +86,15 @@ void Player::HandleKeys()
     m_bIsMoving = TRUE;
   }
 
+  // Normalize diagonal velocity to prevent faster diagonal movement!
+  if (ptVelocity.x != 0 && ptVelocity.y != 0)
+  {
+    // Multiply base speed by 1/sqrt(2) ≈ 0.7071 and round to nearest integer
+    int diagSpeed = (int)(m_iSpeed * 0.707107 + 0.5);
+    ptVelocity.x = (ptVelocity.x > 0) ? diagSpeed : -diagSpeed;
+    ptVelocity.y = (ptVelocity.y > 0) ? diagSpeed : -diagSpeed;
+  }
+
   // Dynamically point to the active directional bitmap strip!
   m_pBitmap = m_pAnimationBitmaps[m_iCurrentDir];
 
@@ -214,8 +223,10 @@ void Player::ExecuteAttackDamage()
       case 5: szOreName = TEXT("Obsidian"); break;
     }
 
-    // 5. Inflict persistent damage and assess mineral status!
+    // 5. Inflict persistent damage, add to inventory, and assess mineral status!
     _pMap->DamageOre(r, c, 1);
+    m_inventory.AddItem(tileVal, 1); // Record item directly to the inventory!
+
     TCHAR szBuffer[32];
     wsprintf(szBuffer, TEXT("+1 %s"), szOreName);
     AddFloatingText(textX, textY, szBuffer, RGB(0, 255, 0)); // Green for collection success

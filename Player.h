@@ -1,5 +1,6 @@
 #pragma once
 #include "Sprite.h"
+#include "Inventory.h"
 
 enum PlayerDirection {
   PDIR_DOWN = 0,
@@ -18,6 +19,7 @@ private:
   BOOL             m_bIsMoving;
   BOOL             m_bIsAttacking;
   double           m_dScale; // Player scaling factor
+  Inventory        m_inventory; // Player inventory tracking items
 
   void ExecuteAttackDamage(); // Triggers precise mineral damage based on facing direction
 
@@ -37,4 +39,8 @@ public:
   // Scale Accessors
   double GetScale() const { return m_dScale; }
   void SetScale(double dScale);
+
+  // Inventory Accessor
+  const Inventory& GetInventory() const { return m_inventory; }
+  Inventory& GetInventory() { return m_inventory; }
 };

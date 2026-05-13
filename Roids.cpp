@@ -283,6 +283,95 @@ void GamePaint(HDC hDC)
 
   // Restore logical origin for integrity of next cycle
   SetWindowOrgEx(hDC, ptOldOrg.x, ptOldOrg.y, NULL);
+
+  // --- RENDER INVENTORY HUD (8 SQUARE BARS AT THE BOTTOM) ---
+  if (_pPlayer != NULL && _pGame != NULL)
+  {
+    const int numSlots = 8;
+    const int barWidth = 56;
+    const int barHeight = 56;
+    const int spacing = 8;
+    const int totalWidth = numSlots * barWidth + (numSlots - 1) * spacing;
+    
+    int screenW = _pGame->GetWidth();
+    int screenH = _pGame->GetHeight();
+    
+    int hudX = (screenW - totalWidth) / 2;
+    int hudY = screenH - barHeight - 15; // 15px from bottom edge
+
+    // High-quality slate/metallic style brushes & pens
+    HBRUSH hBgBrush = CreateSolidBrush(RGB(20, 22, 30));
+    HPEN hBorderPen = CreatePen(PS_SOLID, 2, RGB(65, 70, 90));
+    HPEN hOldPen = (HPEN)SelectObject(hDC, hBorderPen);
+    HBRUSH hOldBrush = (HBRUSH)SelectObject(hDC, hBgBrush);
+
+    // Crisp, small numeric font for slot corners
+    HFONT hTextFont = CreateFont(16, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Arial"));
+    HFONT hPrevFont = (HFONT)SelectObject(hDC, hTextFont);
+    
+    SetBkMode(hDC, TRANSPARENT);
+
+    const Inventory& inv = _pPlayer->GetInventory();
+
+    for (int i = 0; i < numSlots; i++)
+    {
+      int itemID = i + 1;
+      int count = inv.GetItemCount(itemID);
+
+      int xLeft = hudX + i * (barWidth + spacing);
+      int xRight = xLeft + barWidth;
+      int yTop = hudY;
+      int yBottom = hudY + barHeight;
+
+      // Always draw the empty inventory grid cell background
+      RoundRect(hDC, xLeft, yTop, xRight, yBottom, 8, 8);
+
+      // Render content ONLY if collected items exist in that slot!
+      if (count > 0)
+      {
+        int iconSize = 38;
+        int iconX = xLeft + (barWidth - iconSize) / 2;
+        int iconY = yTop + (barHeight - iconSize) / 2;
+
+        // 1. Render scaled Ore Icon
+        if (itemID >= 1 && itemID <= 5 && _pOreBitmaps[itemID - 1] != NULL)
+        {
+           _pOreBitmaps[itemID - 1]->DrawPartScaled(hDC, iconX, iconY, iconSize, iconSize, 0, 0, 64, 64, TRUE);
+        }
+
+        // 2. Render count text with high-visibility drop shadow pushed precisely to the bottom-right corner
+        TCHAR szCount[16];
+        wsprintf(szCount, TEXT("%d"), count);
+        
+        // Target coordinates for the bottom-right corner (with a tight 5px margin from edge)
+        int textX = xRight - 5;
+        int textY = yBottom - 2;
+
+        // Temporarily switch to RIGHT/BOTTOM alignment for pixel-perfect slot text behavior!
+        UINT oldAlign = SetTextAlign(hDC, TA_RIGHT | TA_BOTTOM);
+
+        // Render drop shadow (black offset)
+        SetTextColor(hDC, RGB(0, 0, 0));
+        TextOut(hDC, textX + 1, textY + 1, szCount, lstrlen(szCount));
+
+        // Render foreground text (golden color)
+        SetTextColor(hDC, RGB(255, 225, 120));
+        TextOut(hDC, textX, textY, szCount, lstrlen(szCount));
+
+        // Restore previous alignment to avoid side-effects on other HUD texts
+        SetTextAlign(hDC, oldAlign);
+      }
+    }
+
+    // Proper GDI cleanup
+    SelectObject(hDC, hOldPen);
+    SelectObject(hDC, hOldBrush);
+    SelectObject(hDC, hPrevFont);
+    DeleteObject(hBgBrush);
+    DeleteObject(hBorderPen);
+    DeleteObject(hTextFont);
+  }
 }
 
 void GameCycle()
