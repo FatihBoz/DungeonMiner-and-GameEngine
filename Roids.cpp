@@ -7,6 +7,13 @@
 // Include Files
 //-----------------------------------------------------------------
 #include "Roids.h"
+#include <cmath>
+
+#pragma comment(lib, "Msimg32.lib")
+
+#define TILE_SIZE 64
+
+
 
 //-----------------------------------------------------------------
 // Game Engine Functions
@@ -15,7 +22,7 @@ BOOL GameInitialize(HINSTANCE hInstance)
 {
   // Create the game engine
   _pGame = new GameEngine(hInstance, TEXT("Roids 2"),
-    TEXT("Roids 2"), IDI_ROIDS, IDI_ROIDS_SM, 500, 400);
+    TEXT("Roids 2"), IDI_ROIDS, IDI_ROIDS_SM, 1280, 720);
   if (_pGame == NULL)
     return FALSE;
 
@@ -26,6 +33,57 @@ BOOL GameInitialize(HINSTANCE hInstance)
   _hInstance = hInstance;
 
   return TRUE;
+}
+
+std::vector<FloatingText> _vFloatingTexts;
+
+void AddFloatingText(int x, int y, const TCHAR* szText, COLORREF color)
+{
+  FloatingText ft;
+  ft.x = x;
+  ft.y = y;
+  ft.lifetime = 20; // Lives for 20 render cycles
+  ft.color = color;
+  lstrcpyn(ft.text, szText, 32);
+  _vFloatingTexts.push_back(ft);
+}
+
+void DescendLevel()
+{
+  if (_pMap == NULL || _pPlayer == NULL) return;
+
+  // 1. Determine next level Depth and instantiate a new procedural layout!
+  int nextLevel = _pMap->GetLevel() + 1;
+  delete _pMap;
+  _pMap = new ProceduralMapGeneration(51, 51, 0, nextLevel);
+
+  // 2. Zero out current floating texts to prevent layout artifacts
+  _vFloatingTexts.clear();
+
+  // 3. Delegate safe starting point spatial searches directly to the Map Object!
+  POINT ptSpawn = _pMap->FindStartingSpawnTile();
+  int spawnRow = ptSpawn.y;
+  int spawnCol = ptSpawn.x;
+
+  // 4. Physically relocate the player to center center of that safe coordinate!
+
+  // 4. Physically relocate the player to center center of that safe coordinate!
+  int tileCenterX = spawnCol * TILE_SIZE + (TILE_SIZE / 2);
+  int tileCenterY = spawnRow * TILE_SIZE + (TILE_SIZE / 2);
+
+  int playerWidth = _pPlayer->GetPosition().right - _pPlayer->GetPosition().left;
+  int playerHeight = _pPlayer->GetPosition().bottom - _pPlayer->GetPosition().top;
+
+  int spawnX = tileCenterX - (playerWidth / 2);
+  int spawnY = tileCenterY - (playerHeight / 2);
+
+  _pPlayer->SetPosition(spawnX, spawnY);
+  _pPlayer->SetVelocity(0, 0);
+
+  // 5. Deliver highly polished HUD Level Descend notice!
+  TCHAR szMsg[32];
+  wsprintf(szMsg, TEXT("DEPTH %d"), nextLevel);
+  AddFloatingText(tileCenterX - 32, tileCenterY - 48, szMsg, RGB(0, 255, 255)); // Vibrant Cyan
 }
 
 void GameStart(HWND hWindow)
@@ -43,36 +101,61 @@ void GameStart(HWND hWindow)
   HDC hDC = GetDC(hWindow);
   _pAsteroidBitmap = new Bitmap(hDC, IDB_ASTEROID, _hInstance);
   _pSaucerBitmap = new Bitmap(hDC, IDB_SAUCER, _hInstance);
+  _pTilesetBitmap = new Bitmap(hDC, TEXT("bitmaps/DungeonTileset.bmp"));
+  _pStairsBitmap = new Bitmap(hDC, TEXT("bitmaps/stairs.bmp"));
+
+  // Load Ore Bitmaps in defined logical order (1 to 5)
+  _pOreBitmaps[0] = new Bitmap(hDC, TEXT("bitmaps/IronOre.bmp"));
+  _pOreBitmaps[1] = new Bitmap(hDC, TEXT("bitmaps/AmethystOre.bmp"));
+  _pOreBitmaps[2] = new Bitmap(hDC, TEXT("bitmaps/GoldOre.bmp"));
+  _pOreBitmaps[3] = new Bitmap(hDC, TEXT("bitmaps/RubyOre.bmp"));
+  _pOreBitmaps[4] = new Bitmap(hDC, TEXT("bitmaps/ObsidianOre.bmp"));
+
+  // Load player animations (0: Down, 1: Left, 2: Right, 3: Up)
+  _pPlayerBitmaps[0] = new Bitmap(hDC, TEXT("bitmaps/player/player_run_down.bmp"));
+  _pPlayerBitmaps[1] = new Bitmap(hDC, TEXT("bitmaps/player/player_run_left.bmp"));
+  _pPlayerBitmaps[2] = new Bitmap(hDC, TEXT("bitmaps/player/player_run_right.bmp"));
+  _pPlayerBitmaps[3] = new Bitmap(hDC, TEXT("bitmaps/player/player_run_up.bmp"));
+
+  // Load new player attack animations (Same order: Down, Left, Right, Up)
+  _pPlayerAttackBitmaps[0] = new Bitmap(hDC, TEXT("bitmaps/player/player_attack_down.bmp"));
+  _pPlayerAttackBitmaps[1] = new Bitmap(hDC, TEXT("bitmaps/player/player_attack_left.bmp"));
+  _pPlayerAttackBitmaps[2] = new Bitmap(hDC, TEXT("bitmaps/player/player_attack_right.bmp"));
+  _pPlayerAttackBitmaps[3] = new Bitmap(hDC, TEXT("bitmaps/player/player_attack_up.bmp"));
+
+  // Initialize the larger procedural map - LEVEL 1 selected
+  _pMap = new ProceduralMapGeneration(51, 51, 0, 1); 
 
   // Create the starry background
-  _pBackground = new StarryBackground(500, 400);
+  _pBackground = new StarryBackground(1280, 720);
 
-  // Create the asteroid sprites
-  RECT    rcBounds = { 0, 0, 500, 400 };
-  _pAsteroids[0] = new Sprite(_pAsteroidBitmap, rcBounds, BA_WRAP);
-  _pAsteroids[0]->SetNumFrames(14);
-  _pAsteroids[0]->SetFrameDelay(1);
-  _pAsteroids[0]->SetPosition(250, 200);
-  _pAsteroids[0]->SetVelocity(-3, 1);
-  _pGame->AddSprite(_pAsteroids[0]);
-  _pAsteroids[1] = new Sprite(_pAsteroidBitmap, rcBounds, BA_WRAP);
-  _pAsteroids[1]->SetNumFrames(14);
-  _pAsteroids[1]->SetFrameDelay(2);
-  _pAsteroids[1]->SetPosition(250, 200);
-  _pAsteroids[1]->SetVelocity(3, -2);
-  _pGame->AddSprite(_pAsteroids[1]);
-  _pAsteroids[2] = new Sprite(_pAsteroidBitmap, rcBounds, BA_WRAP);
-  _pAsteroids[2]->SetNumFrames(14);
-  _pAsteroids[2]->SetFrameDelay(3);
-  _pAsteroids[2]->SetPosition(250, 200);
-  _pAsteroids[2]->SetVelocity(-2, -4);
-  _pGame->AddSprite(_pAsteroids[2]);
+  // Define world bounds
+  RECT rcWorldBounds = { 0, 0, 51 * TILE_SIZE, 51 * TILE_SIZE };
 
-  // Create the saucer sprite
-  _pSaucer = new Sprite(_pSaucerBitmap, rcBounds, BA_WRAP);
-  _pSaucer->SetPosition(0, 0);
-  _pSaucer->SetVelocity(3, 1);
-  _pGame->AddSprite(_pSaucer);
+  _pPlayer = new Player(_pPlayerBitmaps, rcWorldBounds, BA_STOP);
+  _pPlayer->SetAttackBitmaps(_pPlayerAttackBitmaps); // Bind attack bitmaps!
+
+  // Delegate spatial starting point searches cleanly to the instantiated map object!
+  POINT ptSpawn = _pMap->FindStartingSpawnTile();
+  int spawnRow = ptSpawn.y;
+  int spawnCol = ptSpawn.x;
+  int tileCenterX = spawnCol * TILE_SIZE + (TILE_SIZE / 2);
+  int tileCenterY = spawnRow * TILE_SIZE + (TILE_SIZE / 2);
+
+  int playerWidth = _pPlayer->GetPosition().right - _pPlayer->GetPosition().left;
+  int playerHeight = _pPlayer->GetPosition().bottom - _pPlayer->GetPosition().top;
+
+  int spawnX = tileCenterX - (playerWidth / 2);
+  int spawnY = tileCenterY - (playerHeight / 2);
+
+  _pPlayer->SetPosition(spawnX, spawnY);
+  _pPlayer->SetVelocity(0, 0);
+  _pGame->AddSprite(_pPlayer);
+
+  // Initialize the dynamic lighting system (Encapsulated!)
+  _pLightMask = new LightMask(hDC);
+  ReleaseDC(hWindow, hDC);
+
 }
 
 void GameEnd()
@@ -81,9 +164,24 @@ void GameEnd()
   DeleteObject(_hOffscreenBitmap);
   DeleteDC(_hOffscreenDC);  
 
-  // Cleanup the asteroid and saucer bitmaps
+  // Cleanup the asteroid, saucer, and tileset bitmaps
   delete _pAsteroidBitmap;
   delete _pSaucerBitmap;
+  delete _pTilesetBitmap;
+  delete _pStairsBitmap;
+  
+  // Cleanup Ore Bitmaps
+  for (int i = 0; i < 5; i++) delete _pOreBitmaps[i];
+
+  // Cleanup Player Animation Bitmaps
+  for (int i = 0; i < 4; i++) delete _pPlayerBitmaps[i];
+  for (int i = 0; i < 4; i++) delete _pPlayerAttackBitmaps[i];
+
+  // Cleanup the light mask system
+  delete _pLightMask;
+
+  // Cleanup the map
+  delete _pMap;
 
   // Cleanup the background
   delete _pBackground;
@@ -105,11 +203,86 @@ void GameDeactivate(HWND hWindow)
 
 void GamePaint(HDC hDC)
 {
-  // Draw the background
+  // Draw the fixed starry background first (0,0 screen space)
   _pBackground->Draw(hDC);
 
-  // Draw the sprites
+  POINT ptOldOrg;
+  SetWindowOrgEx(hDC, _iCameraX, _iCameraY, &ptOldOrg);
+
+  // Draw the procedural map tiles ONLY within the view frustum (Culling Optimization)
+  if (_pMap != NULL && _pTilesetBitmap != NULL)
+  {
+    // Calculate tile boundaries based on camera position
+    int startCol = max(0, _iCameraX / TILE_SIZE);
+    int endCol   = min(_pMap->GetCols(), (_iCameraX + 1280) / TILE_SIZE + 1);
+    int startRow = max(0, _iCameraY / TILE_SIZE);
+    int endRow   = min(_pMap->GetRows(), (_iCameraY + 720) / TILE_SIZE + 1);
+
+    for (int r = startRow; r < endRow; ++r)
+    {
+      for (int c = startCol; c < endCol; ++c)
+      {
+        int tileValue = _pMap->GetTile(r, c);
+        
+        // First, render Floor underlying EVERYTHING that isn't a wall
+        // (Assuming Ores may have transparent or overlay needs)
+        int xSource = (tileValue == 100) ? 0 : 16; 
+        _pTilesetBitmap->DrawPartScaled(hDC, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE, xSource, 0, 16, 16, TRUE);
+
+        // Draw Ore if existing (Map values 1-5 correspond to indices 0-4)
+        if (tileValue >= 1 && tileValue <= 5)
+        {
+           Bitmap* pOre = _pOreBitmaps[tileValue - 1];
+           if (pOre != NULL) {
+               // Ores are native 64x64, so direct Draw aligns perfectly!
+               pOre->Draw(hDC, c * TILE_SIZE, r * TILE_SIZE, TRUE);
+           }
+        }
+        // Draw Exit Stairs (Map value 6)
+        else if (tileValue == 6)
+        {
+           if (_pStairsBitmap != NULL) {
+               // Scale 16x16 native asset to TILE_SIZE
+               _pStairsBitmap->DrawPartScaled(hDC, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE, 0, 0, 16, 16, TRUE);
+           }
+        }
+      }
+    }
+  }
+
+  // Draw the sprites (which live in world coords, so they are automatically offset too!)
   _pGame->DrawSprites(hDC);
+
+  // --- AYDINLATMA SİSTEMİ ---
+  if (_pPlayer != NULL && _pLightMask != NULL)
+  {
+    RECT rcSaucer = _pPlayer->GetPosition();
+    int cx = rcSaucer.left + (rcSaucer.right - rcSaucer.left) / 2;
+    int cy = rcSaucer.top + (rcSaucer.bottom - rcSaucer.top) / 2;
+    
+    _pLightMask->Draw(hDC, cx, cy);
+  }
+
+  // --- DRAW FLOATING TEXTS ---
+  if (!_vFloatingTexts.empty())
+  {
+    SetBkMode(hDC, TRANSPARENT);
+    HFONT hFont = CreateFont(22, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Arial"));
+    HFONT hOldFont = (HFONT)SelectObject(hDC, hFont);
+
+    for (const auto& ft : _vFloatingTexts)
+    {
+      SetTextColor(hDC, ft.color);
+      TextOut(hDC, ft.x, ft.y, ft.text, lstrlen(ft.text));
+    }
+
+    SelectObject(hDC, hOldFont);
+    DeleteObject(hFont);
+  }
+
+  // Restore logical origin for integrity of next cycle
+  SetWindowOrgEx(hDC, ptOldOrg.x, ptOldOrg.y, NULL);
 }
 
 void GameCycle()
@@ -122,6 +295,17 @@ void GameCycle()
 
   // Update the saucer to help it dodge the asteroids
   UpdateSaucer();
+
+  // Update active Floating Texts (float upward and decrement lifetimes)
+  for (auto it = _vFloatingTexts.begin(); it != _vFloatingTexts.end(); )
+  {
+    it->y -= 2; // Move upwards 2 pixels per frame
+    it->lifetime--;
+    if (it->lifetime <= 0)
+      it = _vFloatingTexts.erase(it);
+    else
+      ++it;
+  }
 
   // Obtain a device context for repainting the game
   HWND  hWindow = _pGame->GetWindow();
@@ -140,6 +324,35 @@ void GameCycle()
 
 void HandleKeys()
 {
+  if (_pPlayer != NULL)
+  {
+    // Execute character locomotion and mining checks!
+    _pPlayer->HandleKeys();
+
+    // --- EXIT STAIRS TRIGGER (F KEY) ---
+    // Use an atomic latch to prevent multiple-frame level skipping!
+    static bool s_bFKeyLatch = false;
+    bool bFIsDown = (GetAsyncKeyState('F') & 0x8000) != 0;
+
+    if (bFIsDown && !s_bFKeyLatch)
+    {
+      // Pinpoint player physical core coordinate
+      RECT rcCol = _pPlayer->GetCollision();
+      int cx = rcCol.left + (rcCol.right - rcCol.left) / 2;
+      int cy = rcCol.top + (rcCol.bottom - rcCol.top) / 2;
+
+      // Cross-reference projected coordinates back into the tile matrix
+      int r = cy / TILE_SIZE;
+      int c = cx / TILE_SIZE;
+
+      // Identify if character is physically superimposed on stairs (index 6)
+      if (_pMap != NULL && _pMap->GetTile(r, c) == 6)
+      {
+        DescendLevel();
+      }
+    }
+    s_bFKeyLatch = bFIsDown;
+  }
 }
 
 void MouseButtonDown(int x, int y, BOOL bLeft)
@@ -163,6 +376,47 @@ BOOL SpriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
   return FALSE;
 }
 
+BOOL MapCollision(Sprite* pSprite)
+{
+  if (_pMap == NULL || pSprite == NULL) return FALSE;
+
+  // IMPORTANT: Use the tightened physical collision rect instead of visual position!
+  RECT rcSprite = pSprite->GetCollision();
+
+  int leftTile   = rcSprite.left / TILE_SIZE;
+  int rightTile  = (rcSprite.right - 1) / TILE_SIZE;
+  int topTile    = rcSprite.top / TILE_SIZE;
+  int bottomTile = (rcSprite.bottom - 1) / TILE_SIZE;
+
+  for (int r = topTile; r <= bottomTile; ++r)
+  {
+    for (int c = leftTile; c <= rightTile; ++c)
+    {
+      int val = _pMap->GetTile(r, c);
+      
+      if (val == 100)
+      {
+        // Walls (100) block the sprite completely if the collision rect overlaps
+        return TRUE;
+      }
+      else if (val >= 1 && val <= 5)
+      {
+        // Shrink the 64x64 ore tile rect by 12 pixels on each edge (results in a 40x40 core)
+        RECT rcOre = { c * TILE_SIZE, r * TILE_SIZE, (c + 1) * TILE_SIZE, (r + 1) * TILE_SIZE };
+        InflateRect(&rcOre, -12, -12); 
+
+        RECT rcDummy;
+        if (IntersectRect(&rcDummy, &rcSprite, &rcOre))
+        {
+          return TRUE; // Actual physical collision with the ore core!
+        }
+      }
+    }
+  }
+
+  return FALSE;
+}
+
 void SpriteDying(Sprite* pSprite)
 {
 }
@@ -170,58 +424,23 @@ void SpriteDying(Sprite* pSprite)
 //-----------------------------------------------------------------
 // Functions
 //-----------------------------------------------------------------
+
 void UpdateSaucer()
 {
-  // Obtain the saucer's position
-  RECT rcSaucer, rcRoid;
-  rcSaucer = _pSaucer->GetPosition();
+  if (_pPlayer == NULL) return;
 
-  // Find out which asteroid is closest to the saucer
-  int iXCollision = 500, iYCollision = 400, iXYCollision = 900;
-  for (int i = 0; i < 3; i++)
-  {
-    // Get the asteroid position
-    rcRoid = _pAsteroids[i]->GetPosition();
 
-    // Calculate the minimum XY collision distance
-    int iXCollisionDist = (rcSaucer.left +
-      (rcSaucer.right - rcSaucer.left) / 2) -
-      (rcRoid.left +
-      (rcRoid.right - rcRoid.left) / 2);
-    int iYCollisionDist = (rcSaucer.top +
-      (rcSaucer.bottom - rcSaucer.top) / 2) -
-      (rcRoid.top +
-      (rcRoid.bottom - rcRoid.top) / 2);
-    if ((abs(iXCollisionDist) < abs(iXCollision)) ||
-      (abs(iYCollisionDist) < abs(iYCollision)))
-      if ((abs(iXCollisionDist) + abs(iYCollisionDist)) < iXYCollision)
-      {
-        iXYCollision = abs(iXCollision) + abs(iYCollision);
-        iXCollision = iXCollisionDist;
-        iYCollision = iYCollisionDist;
-      }
-  }
+  // Camera Tracking
+  RECT rcPos = _pPlayer->GetPosition();
+  int saucerCenterX = rcPos.left + (rcPos.right - rcPos.left) / 2;
+  int saucerCenterY = rcPos.top + (rcPos.bottom - rcPos.top) / 2;
 
-  // Move to dodge the asteroids, if necessary
-  POINT ptVelocity;
-  ptVelocity = _pSaucer->GetVelocity();
-  if (abs(iXCollision) < 60)
-  {
-    // Adjust the X velocity
-    if (iXCollision < 0)
-      ptVelocity.x = max(ptVelocity.x - 1, -8);
-    else
-      ptVelocity.x = min(ptVelocity.x + 1, 8);
-  }
-  if (abs(iYCollision) < 60)
-  {
-    // Adjust the Y velocity
-    if (iYCollision < 0)
-      ptVelocity.y = max(ptVelocity.y - 1, -8);
-    else
-      ptVelocity.y = min(ptVelocity.y + 1, 8);
-  }
+  _iCameraX = saucerCenterX - (1280 / 2);
+  _iCameraY = saucerCenterY - (720 / 2);
 
-  // Update the saucer to the new position
-  _pSaucer->SetVelocity(ptVelocity);
+  int worldSize = 51 * TILE_SIZE; 
+  if (_iCameraX < 0) _iCameraX = 0;
+  if (_iCameraY < 0) _iCameraY = 0;
+  if (_iCameraX > worldSize - 1280) _iCameraX = worldSize - 1280;
+  if (_iCameraY > worldSize - 720) _iCameraY = worldSize - 720;
 }

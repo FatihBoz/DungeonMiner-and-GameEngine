@@ -98,20 +98,34 @@
     <ClCompile Include="Background.cpp" />
     <ClCompile Include="Bitmap.cpp" />
     <ClCompile Include="GameEngine.cpp" />
+    <ClCompile Include="ProceduralMapGeneration.cpp" />
     <ClCompile Include="Roids.cpp" />
     <ClCompile Include="Sprite.cpp" />
+    <ClCompile Include="Player.cpp" />
+    <ClCompile Include="LightMask.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Background.h" />
     <ClInclude Include="Bitmap.h" />
     <ClInclude Include="GameEngine.h" />
+    <ClInclude Include="ProceduralMapGeneration.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Roids.h" />
     <ClInclude Include="Sprite.h" />
+    <ClInclude Include="Player.h" />
+    <ClInclude Include="LightMask.h" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="bitmaps\AmethystOre.bmp" />
+    <Image Include="bitmaps\DungeonTileset.bmp" />
+    <Image Include="bitmaps\GoldOre.bmp" />
+    <Image Include="bitmaps\IronOre.bmp" />
+    <Image Include="bitmaps\ObsidianOre.bmp" />
+    <Image Include="bitmaps\RubyOre.bmp" />
     <Image Include="Roids.ico" />
     <Image Include="Roids_sm.ico" />
+    <Image Include="bitmaps\Saucer.bmp" />
+    <Image Include="bitmaps\Asteroid.bmp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Roids.rc" />

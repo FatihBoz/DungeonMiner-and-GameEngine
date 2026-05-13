@@ -17,5 +17,5 @@ IDI_ROIDS_SM        ICON         "Roids_sm.ico"
 //-----------------------------------------------------------------
 // Bitmaps
 //-----------------------------------------------------------------
-IDB_ASTEROID        BITMAP       "Asteroid.bmp"
-IDB_SAUCER          BITMAP       "Saucer.bmp"
+IDB_ASTEROID        BITMAP       "bitmaps\\Asteroid.bmp"
+IDB_SAUCER          BITMAP       "bitmaps\\Saucer.bmp"

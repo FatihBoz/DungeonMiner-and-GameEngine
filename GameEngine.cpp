@@ -78,6 +78,10 @@ LRESULT CALLBACK WndProc(HWND hWindow, UINT msg, WPARAM wParam, LPARAM lParam)
 //-----------------------------------------------------------------
 BOOL GameEngine::CheckSpriteCollision(Sprite* pTestSprite)
 {
+  // Check if the sprite collided with map elements first
+  if (MapCollision(pTestSprite))
+    return TRUE;
+
   // See if the sprite has collided with any other sprites
   vector<Sprite*>::iterator siSprite;
   for (siSprite = m_vSprites.begin(); siSprite != m_vSprites.end(); siSprite++)

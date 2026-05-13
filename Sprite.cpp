@@ -173,14 +173,25 @@ SPRITEACTION Sprite::Update()
 
 void Sprite::Draw(HDC hDC)
 {
-  // Draw the sprite if it isn't hidden
+  // Draw the sprite if it isn't hidden and the bitmap exists
   if (m_pBitmap != NULL && !m_bHidden)
   {
-    // Draw the appropriate frame, if necessary
+    // Calculate dimensions dynamically based on logical position bounding box
+    int wDest = m_rcPosition.right - m_rcPosition.left;
+    int hDest = m_rcPosition.bottom - m_rcPosition.top;
+
+    // Draw scaled based on active frame selection
     if (m_iNumFrames == 1)
-      m_pBitmap->Draw(hDC, m_rcPosition.left, m_rcPosition.top, TRUE);
+    {
+      // Draw the single-frame bitmap scaled to fit destination size
+      m_pBitmap->DrawPartScaled(hDC, m_rcPosition.left, m_rcPosition.top,
+        wDest, hDest, 0, 0, m_pBitmap->GetWidth(), m_pBitmap->GetHeight(), TRUE);
+    }
     else
-      m_pBitmap->DrawPart(hDC, m_rcPosition.left, m_rcPosition.top,
-        m_iCurFrame * GetWidth(), 0, GetWidth(), GetHeight(), TRUE);
+    {
+      // Draw the selected animation slice scaled to fit destination size
+      m_pBitmap->DrawPartScaled(hDC, m_rcPosition.left, m_rcPosition.top,
+        wDest, hDest, m_iCurFrame * GetWidth(), 0, GetWidth(), GetHeight(), TRUE);
+    }
   }
 }

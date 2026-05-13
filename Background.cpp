@@ -66,7 +66,7 @@ StarryBackground::StarryBackground(int iWidth, int iHeight, int iNumStars,
   m_iTwinkleDelay = iTwinkleDelay;
 
   // Create the stars
-  for (int i = 0; i < iNumStars; i++)
+  for (int i = 0; i < m_iNumStars; i++)
   {
     m_ptStars[i].x = rand() % iWidth;
     m_ptStars[i].y = rand() % iHeight;
