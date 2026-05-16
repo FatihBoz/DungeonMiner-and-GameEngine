@@ -27,6 +27,10 @@ struct FloatingText {
 #include "ProceduralMapGeneration.h"
 #include "LightMask.h"
 #include "Player.h"
+#include "Enemy.h"
+#include "BatEnemy.h"
+#include "GhostEnemy.h"
+#include "DebugSystem.h"
 
 //-----------------------------------------------------------------
 // Global Variables
@@ -47,6 +51,8 @@ Bitmap*           _pPlayerBitmaps[4];       // 0: Down, 1: Left, 2: Right, 3: Up
 Bitmap*           _pPlayerAttackBitmaps[4]; // Attack: Down, Left, Right, Up
 ProceduralMapGeneration* _pMap;
 LightMask*        _pLightMask;
+std::vector<Enemy*> _vEnemies;
+std::vector<Sprite*> _vMapCollisionIgnoredSprites;
 int               _iCameraX;
 int               _iCameraY;
 
@@ -59,3 +65,10 @@ extern std::vector<FloatingText> _vFloatingTexts;
 void UpdateSaucer();
 void AddFloatingText(int x, int y, const TCHAR* szText, COLORREF color);
 void DescendLevel();
+void ClearEnemies();
+void SpawnBatEnemies();
+void SpawnGhostEnemies();
+void UntrackEnemy(Sprite* pSprite);
+Enemy* GetTrackedEnemy(Sprite* pSprite);
+void IgnoreMapCollision(Sprite* pSprite);
+BOOL IsMapCollisionIgnored(Sprite* pSprite);

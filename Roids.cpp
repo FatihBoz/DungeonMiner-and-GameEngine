@@ -8,6 +8,7 @@
 //-----------------------------------------------------------------
 #include "Roids.h"
 #include <cmath>
+#include <cstdlib>
 
 #pragma comment(lib, "Msimg32.lib")
 
@@ -39,6 +40,8 @@ std::vector<FloatingText> _vFloatingTexts;
 
 void AddFloatingText(int x, int y, const TCHAR* szText, COLORREF color)
 {
+  DebugSetPhase(TEXT("AddFloatingText"));
+
   FloatingText ft;
   ft.x = x;
   ft.y = y;
@@ -46,14 +49,207 @@ void AddFloatingText(int x, int y, const TCHAR* szText, COLORREF color)
   ft.color = color;
   lstrcpyn(ft.text, szText, 32);
   _vFloatingTexts.push_back(ft);
+  DebugLogFormat(TEXT("floatingText count=%u text=%s pos=(%d,%d)"),
+    (unsigned int)_vFloatingTexts.size(), ft.text, x, y);
+}
+
+void ClearEnemies()
+{
+  DebugLogFormat(TEXT("ClearEnemies count=%u"), (unsigned int)_vEnemies.size());
+
+  for (size_t i = 0; i < _vEnemies.size(); i++)
+  {
+    if (_vEnemies[i] != NULL)
+      _vEnemies[i]->Kill();
+  }
+}
+
+void UntrackEnemy(Sprite* pSprite)
+{
+  DebugLogFormat(TEXT("UntrackEnemy sprite=0x%p"), pSprite);
+
+  for (std::vector<Enemy*>::iterator it = _vEnemies.begin(); it != _vEnemies.end(); )
+  {
+    if (*it == pSprite)
+      it = _vEnemies.erase(it);
+    else
+      ++it;
+  }
+
+  for (std::vector<Sprite*>::iterator it = _vMapCollisionIgnoredSprites.begin(); it != _vMapCollisionIgnoredSprites.end(); )
+  {
+    if (*it == pSprite)
+      it = _vMapCollisionIgnoredSprites.erase(it);
+    else
+      ++it;
+  }
+}
+
+Enemy* GetTrackedEnemy(Sprite* pSprite)
+{
+  for (size_t i = 0; i < _vEnemies.size(); i++)
+  {
+    if (_vEnemies[i] == pSprite)
+      return _vEnemies[i];
+  }
+
+  return NULL;
+}
+
+void IgnoreMapCollision(Sprite* pSprite)
+{
+  if (pSprite != NULL)
+  {
+    _vMapCollisionIgnoredSprites.push_back(pSprite);
+    DebugLogFormat(TEXT("IgnoreMapCollision sprite=0x%p ignoredCount=%u"),
+      pSprite, (unsigned int)_vMapCollisionIgnoredSprites.size());
+  }
+}
+
+BOOL IsMapCollisionIgnored(Sprite* pSprite)
+{
+  for (size_t i = 0; i < _vMapCollisionIgnoredSprites.size(); i++)
+  {
+    if (_vMapCollisionIgnoredSprites[i] == pSprite)
+      return TRUE;
+  }
+
+  return FALSE;
+}
+
+void SpawnBatEnemies()
+{
+  DebugSetPhase(TEXT("SpawnBatEnemies"));
+
+  if (_pGame == NULL || _pMap == NULL || _pSaucerBitmap == NULL)
+    return;
+
+  RECT rcWorldBounds = { 0, 0, _pMap->GetCols() * TILE_SIZE, _pMap->GetRows() * TILE_SIZE };
+  POINT ptSpawn = { TILE_SIZE * 4, TILE_SIZE * 4 };
+  BOOL bFoundSpawn = FALSE;
+
+  if (_pPlayer != NULL)
+  {
+    RECT rcPlayer = _pPlayer->GetPosition();
+    int playerCol = (rcPlayer.left + (rcPlayer.right - rcPlayer.left) / 2) / TILE_SIZE;
+    int playerRow = (rcPlayer.top + (rcPlayer.bottom - rcPlayer.top) / 2) / TILE_SIZE;
+
+    for (int radius = 2; radius <= 4 && !bFoundSpawn; radius++)
+    {
+      for (int dy = -radius; dy <= radius && !bFoundSpawn; dy++)
+      {
+        for (int dx = -radius; dx <= radius && !bFoundSpawn; dx++)
+        {
+          if (abs(dx) != radius && abs(dy) != radius)
+            continue;
+
+          int row = playerRow + dy;
+          int col = playerCol + dx;
+          if (_pMap->GetTile(row, col) != 0)
+            continue;
+
+          ptSpawn.x = col * TILE_SIZE + TILE_SIZE / 4;
+          ptSpawn.y = row * TILE_SIZE + TILE_SIZE / 4;
+          bFoundSpawn = TRUE;
+        }
+      }
+    }
+  }
+
+  for (int attempt = 0; attempt < 200 && !bFoundSpawn; attempt++)
+  {
+    int row = rand() % _pMap->GetRows();
+    int col = rand() % _pMap->GetCols();
+    if (_pMap->GetTile(row, col) != 0)
+      continue;
+
+    ptSpawn.x = col * TILE_SIZE + TILE_SIZE / 4;
+    ptSpawn.y = row * TILE_SIZE + TILE_SIZE / 4;
+
+    if (_pPlayer != NULL)
+    {
+      RECT rcPlayer = _pPlayer->GetPosition();
+      int playerCol = (rcPlayer.left + (rcPlayer.right - rcPlayer.left) / 2) / TILE_SIZE;
+      int playerRow = (rcPlayer.top + (rcPlayer.bottom - rcPlayer.top) / 2) / TILE_SIZE;
+      int dx = playerCol - col;
+      int dy = playerRow - row;
+      if ((dx * dx + dy * dy) < 64)
+        continue;
+    }
+
+    bFoundSpawn = TRUE;
+    break;
+  }
+
+  BatEnemy* pBat = new BatEnemy(_pSaucerBitmap, ptSpawn, rcWorldBounds);
+  pBat->SetZOrder(1);
+  _vEnemies.push_back(pBat);
+  _pGame->AddSprite(pBat);
+  DebugLogFormat(TEXT("spawn Bat sprite=0x%p pos=(%ld,%ld) enemies=%u"),
+    pBat, ptSpawn.x, ptSpawn.y, (unsigned int)_vEnemies.size());
+}
+
+void SpawnGhostEnemies()
+{
+  DebugSetPhase(TEXT("SpawnGhostEnemies"));
+
+  if (_pGame == NULL || _pMap == NULL || _pSaucerBitmap == NULL)
+    return;
+
+  RECT rcWorldBounds = { 0, 0, _pMap->GetCols() * TILE_SIZE, _pMap->GetRows() * TILE_SIZE };
+  int row = _pMap->GetRows() / 2;
+  int col = _pMap->GetCols() / 2;
+
+  if (_pPlayer != NULL)
+  {
+    RECT rcPlayer = _pPlayer->GetPosition();
+    int playerCol = (rcPlayer.left + (rcPlayer.right - rcPlayer.left) / 2) / TILE_SIZE;
+    int playerRow = (rcPlayer.top + (rcPlayer.bottom - rcPlayer.top) / 2) / TILE_SIZE;
+    int dx = (rand() % 9) - 4;
+    int dy = (rand() % 9) - 4;
+
+    if (dx == 0 && dy == 0)
+      dx = 3;
+
+    col = playerCol + dx;
+    row = playerRow + dy;
+  }
+  else
+  {
+    row = rand() % _pMap->GetRows();
+    col = rand() % _pMap->GetCols();
+  }
+
+  if (row < 0)
+    row = 0;
+  if (col < 0)
+    col = 0;
+  if (row >= _pMap->GetRows())
+    row = _pMap->GetRows() - 1;
+  if (col >= _pMap->GetCols())
+    col = _pMap->GetCols() - 1;
+
+  POINT ptSpawn = { col * TILE_SIZE + TILE_SIZE / 4, row * TILE_SIZE + TILE_SIZE / 4 };
+  GhostEnemy* pGhost = new GhostEnemy(_pSaucerBitmap, ptSpawn, rcWorldBounds);
+  pGhost->SetZOrder(1);
+  _vEnemies.push_back(pGhost);
+  IgnoreMapCollision(pGhost);
+  _pGame->AddSprite(pGhost);
+  DebugLogFormat(TEXT("spawn Ghost sprite=0x%p pos=(%ld,%ld) enemies=%u"),
+    pGhost, ptSpawn.x, ptSpawn.y, (unsigned int)_vEnemies.size());
 }
 
 void DescendLevel()
 {
+  DebugSetPhase(TEXT("DescendLevel"));
+
   if (_pMap == NULL || _pPlayer == NULL) return;
+
+  ClearEnemies();
 
   // 1. Determine next level Depth and instantiate a new procedural layout!
   int nextLevel = _pMap->GetLevel() + 1;
+  DebugLogFormat(TEXT("DescendLevel begin nextLevel=%d"), nextLevel);
   delete _pMap;
   _pMap = new ProceduralMapGeneration(51, 51, 0, nextLevel);
 
@@ -84,10 +280,18 @@ void DescendLevel()
   TCHAR szMsg[32];
   wsprintf(szMsg, TEXT("DEPTH %d"), nextLevel);
   AddFloatingText(tileCenterX - 32, tileCenterY - 48, szMsg, RGB(0, 255, 255)); // Vibrant Cyan
+
+  SpawnBatEnemies();
+  SpawnGhostEnemies();
+  DebugLogFormat(TEXT("DescendLevel complete level=%d player=(%d,%d)"),
+    nextLevel, spawnX, spawnY);
 }
 
 void GameStart(HWND hWindow)
 {
+  DebugSetPhase(TEXT("GameStart"));
+  DebugLogEvent(TEXT("GameStart begin"));
+
   // Seed the random number generator
   srand(GetTickCount());
 
@@ -152,17 +356,31 @@ void GameStart(HWND hWindow)
   _pPlayer->SetVelocity(0, 0);
   _pGame->AddSprite(_pPlayer);
 
+  SpawnBatEnemies();
+  SpawnGhostEnemies();
+  DebugLogFormat(TEXT("GameStart spawned enemies=%u"), (unsigned int)_vEnemies.size());
+
   // Initialize the dynamic lighting system (Encapsulated!)
   _pLightMask = new LightMask(hDC);
   ReleaseDC(hWindow, hDC);
 
+  DebugLogEvent(TEXT("GameStart complete"));
 }
 
 void GameEnd()
 {
+  DebugSetPhase(TEXT("GameEnd"));
+  DebugLogEvent(TEXT("GameEnd begin"));
+
   // Cleanup the offscreen device context and bitmap
   DeleteObject(_hOffscreenBitmap);
   DeleteDC(_hOffscreenDC);  
+
+  // Cleanup sprites before deleting shared bitmap resources they reference
+  if (_pGame != NULL)
+    _pGame->CleanupSprites();
+  _vEnemies.clear();
+  _vMapCollisionIgnoredSprites.clear();
 
   // Cleanup the asteroid, saucer, and tileset bitmaps
   delete _pAsteroidBitmap;
@@ -186,11 +404,10 @@ void GameEnd()
   // Cleanup the background
   delete _pBackground;
 
-  // Cleanup the sprites
-  _pGame->CleanupSprites();
-
   // Cleanup the game engine
   delete _pGame;
+  _pGame = NULL;
+  DebugLogEvent(TEXT("GameEnd complete"));
 }
 
 void GameActivate(HWND hWindow)
@@ -376,16 +593,35 @@ void GamePaint(HDC hDC)
 
 void GameCycle()
 {
+  DebugSetPhase(TEXT("GameCycle.Begin"));
+
+  POINT ptPlayer = { 0, 0 };
+  if (_pPlayer != NULL)
+  {
+    RECT rcPlayer = _pPlayer->GetPosition();
+    ptPlayer.x = rcPlayer.left;
+    ptPlayer.y = rcPlayer.top;
+  }
+  POINT ptCamera = { _iCameraX, _iCameraY };
+  int iLevel = (_pMap != NULL) ? _pMap->GetLevel() : -1;
+  size_t nSprites = (_pGame != NULL) ? _pGame->GetSpriteCount() : 0;
+  DebugFrameHeartbeat(iLevel, ptPlayer, ptCamera, nSprites,
+    _vEnemies.size(), _vFloatingTexts.size());
+
   // Update the background
+  DebugSetPhase(TEXT("GameCycle.BackgroundUpdate"));
   _pBackground->Update();
 
   // Update the sprites
+  DebugSetPhase(TEXT("GameCycle.UpdateSprites"));
   _pGame->UpdateSprites();
 
   // Update the saucer to help it dodge the asteroids
+  DebugSetPhase(TEXT("GameCycle.UpdateSaucer"));
   UpdateSaucer();
 
   // Update active Floating Texts (float upward and decrement lifetimes)
+  DebugSetPhase(TEXT("GameCycle.FloatingTexts"));
   for (auto it = _vFloatingTexts.begin(); it != _vFloatingTexts.end(); )
   {
     it->y -= 2; // Move upwards 2 pixels per frame
@@ -401,6 +637,7 @@ void GameCycle()
   HDC   hDC = GetDC(hWindow);
 
   // Paint the game to the offscreen device context
+  DebugSetPhase(TEXT("GameCycle.Paint"));
   GamePaint(_hOffscreenDC);
 
   // Blit the offscreen bitmap to the game screen
@@ -409,10 +646,13 @@ void GameCycle()
 
   // Cleanup
   ReleaseDC(hWindow, hDC);
+  DebugSetPhase(TEXT("GameCycle.End"));
 }
 
 void HandleKeys()
 {
+  DebugSetPhase(TEXT("HandleKeys"));
+
   if (_pPlayer != NULL)
   {
     // Execute character locomotion and mining checks!
@@ -437,6 +677,7 @@ void HandleKeys()
       // Identify if character is physically superimposed on stairs (index 6)
       if (_pMap != NULL && _pMap->GetTile(r, c) == 6)
       {
+        DebugLogFormat(TEXT("stairs trigger tile=(%d,%d)"), r, c);
         DescendLevel();
       }
     }
@@ -462,12 +703,36 @@ void HandleJoystick(JOYSTATE jsJoystickState)
 
 BOOL SpriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 {
+  DebugSetPhase(TEXT("SpriteCollision"));
+
+  Enemy* pEnemy = NULL;
+
+  if (pSpriteHitter == _pPlayer)
+    pEnemy = GetTrackedEnemy(pSpriteHittee);
+  else if (pSpriteHittee == _pPlayer)
+    pEnemy = GetTrackedEnemy(pSpriteHitter);
+
+  if (pEnemy != NULL && _pPlayer != NULL)
+  {
+    if ((DebugGetFrameNumber() % 15) == 0)
+    {
+      DebugLogFormat(TEXT("player enemy collision enemy=0x%p hitter=0x%p hittee=0x%p"),
+        pEnemy, pSpriteHitter, pSpriteHittee);
+    }
+    pEnemy->TouchPlayer(_pPlayer);
+  }
+
   return FALSE;
 }
 
 BOOL MapCollision(Sprite* pSprite)
 {
+  DebugSetPhase(TEXT("MapCollision"));
+
   if (_pMap == NULL || pSprite == NULL) return FALSE;
+
+  if (IsMapCollisionIgnored(pSprite))
+    return FALSE;
 
   // IMPORTANT: Use the tightened physical collision rect instead of visual position!
   RECT rcSprite = pSprite->GetCollision();
@@ -485,6 +750,12 @@ BOOL MapCollision(Sprite* pSprite)
       
       if (val == 100)
       {
+        if ((DebugGetFrameNumber() % 30) == 0)
+        {
+          DebugLogFormat(TEXT("map collision wall sprite=0x%p tile=(%d,%d)"),
+            pSprite, r, c);
+        }
+
         // Walls (100) block the sprite completely if the collision rect overlaps
         return TRUE;
       }
@@ -497,6 +768,11 @@ BOOL MapCollision(Sprite* pSprite)
         RECT rcDummy;
         if (IntersectRect(&rcDummy, &rcSprite, &rcOre))
         {
+          if ((DebugGetFrameNumber() % 30) == 0)
+          {
+            DebugLogFormat(TEXT("map collision ore sprite=0x%p tile=(%d,%d) val=%d"),
+              pSprite, r, c, val);
+          }
           return TRUE; // Actual physical collision with the ore core!
         }
       }
@@ -508,6 +784,9 @@ BOOL MapCollision(Sprite* pSprite)
 
 void SpriteDying(Sprite* pSprite)
 {
+  DebugSetPhase(TEXT("SpriteDying"));
+  DebugLogFormat(TEXT("SpriteDying sprite=0x%p"), pSprite);
+  UntrackEnemy(pSprite);
 }
 
 //-----------------------------------------------------------------
@@ -516,6 +795,8 @@ void SpriteDying(Sprite* pSprite)
 
 void UpdateSaucer()
 {
+  DebugSetPhase(TEXT("UpdateSaucer"));
+
   if (_pPlayer == NULL) return;
 
 

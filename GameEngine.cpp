@@ -7,6 +7,7 @@
 // Include Files
 //-----------------------------------------------------------------
 #include "GameEngine.h"
+#include "DebugSystem.h"
 
 //-----------------------------------------------------------------
 // Static Variable Initialization
@@ -19,15 +20,27 @@ GameEngine *GameEngine::m_pGameEngine = NULL;
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   PSTR szCmdLine, int iCmdShow)
 {
+  DebugInitialize();
+  DebugSetPhase(TEXT("WinMain"));
+  DebugLogEvent(TEXT("WinMain entered"));
+
   MSG         msg;
   static int  iTickTrigger = 0;
   int         iTickCount;
 
   if (GameInitialize(hInstance))
   {
+    DebugLogEvent(TEXT("GameInitialize succeeded"));
+
     // Initialize the game engine
     if (!GameEngine::GetEngine()->Initialize(iCmdShow))
+    {
+      DebugLogEvent(TEXT("GameEngine::Initialize failed"));
+      DebugShutdown();
       return FALSE;
+    }
+
+    DebugLogEvent(TEXT("GameEngine::Initialize succeeded"));
 
     // Enter the main message loop
     while (TRUE)
@@ -51,24 +64,33 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
           {
             iTickTrigger = iTickCount +
               GameEngine::GetEngine()->GetFrameDelay();
+            DebugSetPhase(TEXT("HandleKeys"));
             HandleKeys();
+            DebugSetPhase(TEXT("CheckJoystick"));
             GameEngine::GetEngine()->CheckJoystick();
+            DebugSetPhase(TEXT("GameCycle"));
             GameCycle();
           }
         }
       }
     }
+    DebugLogFormat(TEXT("WinMain exiting normally code=%d"), (int)msg.wParam);
+    DebugShutdown();
     return (int)msg.wParam;
   }
 
   // End the game
+  DebugLogEvent(TEXT("GameInitialize failed"));
   GameEnd();
+  DebugShutdown();
 
   return TRUE;
 }
 
 LRESULT CALLBACK WndProc(HWND hWindow, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+  DebugSetPhase(TEXT("WndProc"));
+
   // Route all Windows messages to the game engine
   return GameEngine::GetEngine()->HandleEvent(hWindow, msg, wParam, lParam);
 }
@@ -78,6 +100,8 @@ LRESULT CALLBACK WndProc(HWND hWindow, UINT msg, WPARAM wParam, LPARAM lParam)
 //-----------------------------------------------------------------
 BOOL GameEngine::CheckSpriteCollision(Sprite* pTestSprite)
 {
+  DebugSetPhase(TEXT("CheckSpriteCollision"));
+
   // Check if the sprite collided with map elements first
   if (MapCollision(pTestSprite))
     return TRUE;
@@ -362,6 +386,8 @@ void GameEngine::DrawSprites(HDC hDC)
 
 void GameEngine::UpdateSprites()
 {
+  DebugSetPhase(TEXT("UpdateSprites"));
+
   // Update the sprites in the sprite vector
   RECT          rcOldSpritePos;
   SPRITEACTION  saSpriteAction;
@@ -372,11 +398,14 @@ void GameEngine::UpdateSprites()
     rcOldSpritePos = (*siSprite)->GetPosition();
 
     // Update the sprite
+    DebugSetPhase(TEXT("UpdateSprites.SpriteUpdate"));
     saSpriteAction = (*siSprite)->Update();
 
     // Handle the SA_KILL sprite action
     if (saSpriteAction & SA_KILL)
     {
+      DebugLogFormat(TEXT("sprite kill sprite=0x%p"), *siSprite);
+
       // Notify the game that the sprite is dying
       SpriteDying(*siSprite);
 
@@ -388,6 +417,7 @@ void GameEngine::UpdateSprites()
     }
 
     // See if the sprite collided with any others
+    DebugSetPhase(TEXT("UpdateSprites.Collision"));
     if (CheckSpriteCollision(*siSprite))
       (*siSprite)->SetPosition(rcOldSpritePos);  // Restore the old sprite position
 	siSprite++;

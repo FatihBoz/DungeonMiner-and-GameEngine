@@ -96,8 +96,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Background.cpp" />
+    <ClCompile Include="BatEnemy.cpp" />
     <ClCompile Include="Bitmap.cpp" />
+    <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="GameEngine.cpp" />
+    <ClCompile Include="GhostEnemy.cpp" />
+    <ClCompile Include="DebugSystem.cpp" />
     <ClCompile Include="ProceduralMapGeneration.cpp" />
     <ClCompile Include="Roids.cpp" />
     <ClCompile Include="Sprite.cpp" />
@@ -106,8 +110,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Background.h" />
+    <ClInclude Include="BatEnemy.h" />
     <ClInclude Include="Bitmap.h" />
+    <ClInclude Include="Enemy.h" />
     <ClInclude Include="GameEngine.h" />
+    <ClInclude Include="GhostEnemy.h" />
+    <ClInclude Include="DebugSystem.h" />
     <ClInclude Include="ProceduralMapGeneration.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Roids.h" />

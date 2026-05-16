@@ -96,6 +96,7 @@ public:
   void                DrawSprites(HDC hDC);
   void                UpdateSprites();
   void                CleanupSprites();
+  size_t              GetSpriteCount() { return m_vSprites.size(); };
   Sprite*             IsPointInSprite(int x, int y);
   void                PlayMIDISong(LPTSTR szMIDIFileName = TEXT(""),
                         BOOL bRestart = TRUE);
