@@ -12,6 +12,7 @@ private:
   BOOL  IsOpenFloorTile(int row, int col) const;
   POINT CreateRandomPointNearHome() const;
   void  RefreshRandomPatrolRoute();
+  void  UpdateAnimationDirection();
 
 protected:
   virtual void UpdatePatrol(Player* pPlayer) override;

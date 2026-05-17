@@ -6,8 +6,11 @@ class SkeletonEnemy : public Enemy
 {
 private:
   int   m_iFireCooldown;
+  int   m_iLastAnimationRow;
 
   void  FireAtPlayer(Player* pPlayer);
+  void  UpdateAnimationDirection();
+  void  HoldStoppedAnimationFrame();
 
 protected:
   virtual void UpdateIdle(Player* pPlayer) override;
@@ -20,4 +23,6 @@ protected:
 public:
   SkeletonEnemy(Bitmap* pBitmap, POINT ptPosition, RECT& rcBounds);
   virtual ~SkeletonEnemy();
+
+  virtual SPRITEACTION Update() override;
 };

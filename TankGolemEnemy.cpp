@@ -5,9 +5,10 @@
 
 TankGolemEnemy::TankGolemEnemy(Bitmap* pBitmap, POINT ptPosition, RECT& rcBounds)
   : Enemy(pBitmap, ptPosition, rcBounds), m_ptLastPosition(ptPosition),
-    m_iStuckTicks(0), m_bHasPatrolSample(FALSE), m_pTileBlockedFn(NULL),
-    m_pPathContext(NULL), m_iPathRows(0), m_iPathCols(0), m_iTileSize(64),
-    m_iPathIndex(0), m_iPathRefreshTicks(0), m_bPathAttempted(FALSE)
+    m_iStuckTicks(0), m_iLastAnimationRow(2), m_bHasPatrolSample(FALSE),
+    m_pTileBlockedFn(NULL), m_pPathContext(NULL), m_iPathRows(0),
+    m_iPathCols(0), m_iTileSize(64), m_iPathIndex(0),
+    m_iPathRefreshTicks(0), m_bPathAttempted(FALSE)
 {
   m_iHealth = 20;
   m_iMoveSpeed = 2;
@@ -27,6 +28,13 @@ TankGolemEnemy::TankGolemEnemy(Bitmap* pBitmap, POINT ptPosition, RECT& rcBounds
 TankGolemEnemy::~TankGolemEnemy()
 {
   LogState(TEXT("destroyed"));
+}
+
+SPRITEACTION TankGolemEnemy::Update()
+{
+  SPRITEACTION saAction = Enemy::Update();
+  HoldStoppedAnimationFrame();
+  return saAction;
 }
 
 void TankGolemEnemy::UpdateIdle(Player* pPlayer)
@@ -380,13 +388,28 @@ void TankGolemEnemy::UpdateAnimationDirection()
   POINT ptVelocity = GetVelocity();
 
   if (ptVelocity.y < 0)
-    SetFrameRow(0);
+    m_iLastAnimationRow = 0;
   else if (ptVelocity.x > 0)
-    SetFrameRow(1);
+    m_iLastAnimationRow = 1;
   else if (ptVelocity.y > 0)
-    SetFrameRow(2);
+    m_iLastAnimationRow = 2;
   else if (ptVelocity.x < 0)
-    SetFrameRow(3);
+    m_iLastAnimationRow = 3;
+  else
+    return;
+
+  SetFrameRow(m_iLastAnimationRow);
+}
+
+void TankGolemEnemy::HoldStoppedAnimationFrame()
+{
+  POINT ptVelocity = GetVelocity();
+
+  if (ptVelocity.x != 0 || ptVelocity.y != 0)
+    return;
+
+  SetFrameRow(m_iLastAnimationRow);
+  m_iCurFrame = 1;
 }
 
 void TankGolemEnemy::ConfigurePathfinding(int iRows, int iCols, int iTileSize,

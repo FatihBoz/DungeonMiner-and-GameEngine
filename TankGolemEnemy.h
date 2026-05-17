@@ -9,6 +9,7 @@ private:
   POINT m_ptDirection;
   POINT m_ptLastPosition;
   int   m_iStuckTicks;
+  int   m_iLastAnimationRow;
   BOOL  m_bHasPatrolSample;
   AStarTileBlockedFn m_pTileBlockedFn;
   void* m_pPathContext;
@@ -31,6 +32,7 @@ private:
   void  ClearPath();
   void  LogState(const TCHAR* szMessage);
   void  UpdateAnimationDirection();
+  void  HoldStoppedAnimationFrame();
 
 protected:
   virtual void UpdateIdle(Player* pPlayer) override;
@@ -44,6 +46,7 @@ public:
   TankGolemEnemy(Bitmap* pBitmap, POINT ptPosition, RECT& rcBounds);
   virtual ~TankGolemEnemy();
 
+  virtual SPRITEACTION Update() override;
   void ConfigurePathfinding(int iRows, int iCols, int iTileSize,
     AStarTileBlockedFn pTileBlockedFn, void* pContext);
 };

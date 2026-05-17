@@ -67,8 +67,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
               GameEngine::GetEngine()->GetFrameDelay();
             DebugSetPhase(TEXT("HandleKeys"));
             HandleKeys();
+            /*
+            // Joystick input is disabled for now. Keep the old polling path here
+            // so it can be restored without rewriting the joystick implementation.
             DebugSetPhase(TEXT("CheckJoystick"));
             GameEngine::GetEngine()->CheckJoystick();
+            */
             DebugSetPhase(TEXT("GameCycle"));
             GameCycle();
           }

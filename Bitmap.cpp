@@ -7,6 +7,7 @@
 // Include Files
 //-----------------------------------------------------------------
 #include "Bitmap.h"
+#include <math.h>
 
 //-----------------------------------------------------------------
 // Bitmap Constructor(s)/Destructor
@@ -225,5 +226,80 @@ void Bitmap::DrawPartScaledFlipped(HDC hDC, int x, int y, int wDest, int hDest,
     SelectObject(hSrcDC, hOldSrcBitmap);
     DeleteDC(hSrcDC);
   }
+}
+
+void Bitmap::DrawScaledRotated(HDC hDC, int x, int y, int wDest, int hDest,
+  double dAngleDegrees, BOOL bTrans, COLORREF crTransColor)
+{
+  if (m_hBitmap == NULL || wDest <= 0 || hDest <= 0)
+    return;
+
+  HDC hSrcDC = CreateCompatibleDC(hDC);
+  HBITMAP hOldSrcBitmap = (HBITMAP)SelectObject(hSrcDC, m_hBitmap);
+
+  HDC hScaledDC = CreateCompatibleDC(hDC);
+  HBITMAP hScaledBitmap = CreateCompatibleBitmap(hDC, wDest, hDest);
+  HBITMAP hOldScaledBitmap = (HBITMAP)SelectObject(hScaledDC, hScaledBitmap);
+
+  HBRUSH hTransparentBrush = CreateSolidBrush(crTransColor);
+  RECT rcScaled = { 0, 0, wDest, hDest };
+  FillRect(hScaledDC, &rcScaled, hTransparentBrush);
+
+  int oldScaledStretchMode = SetStretchBltMode(hScaledDC, COLORONCOLOR);
+  if (bTrans)
+    TransparentBlt(hScaledDC, 0, 0, wDest, hDest, hSrcDC, 0, 0,
+      GetWidth(), GetHeight(), crTransColor);
+  else
+    StretchBlt(hScaledDC, 0, 0, wDest, hDest, hSrcDC, 0, 0,
+      GetWidth(), GetHeight(), SRCCOPY);
+  SetStretchBltMode(hScaledDC, oldScaledStretchMode);
+
+  int iCanvasSize = (int)ceil(sqrt((double)(wDest * wDest + hDest * hDest))) + 2;
+  HDC hRotatedDC = CreateCompatibleDC(hDC);
+  HBITMAP hRotatedBitmap = CreateCompatibleBitmap(hDC, iCanvasSize, iCanvasSize);
+  HBITMAP hOldRotatedBitmap = (HBITMAP)SelectObject(hRotatedDC, hRotatedBitmap);
+
+  RECT rcRotated = { 0, 0, iCanvasSize, iCanvasSize };
+  FillRect(hRotatedDC, &rcRotated, hTransparentBrush);
+  DeleteObject(hTransparentBrush);
+
+  const double PI = 3.14159265358979323846;
+  double radians = dAngleDegrees * PI / 180.0;
+  double c = cos(radians);
+  double s = sin(radians);
+  double centerX = iCanvasSize / 2.0;
+  double centerY = iCanvasSize / 2.0;
+  double halfW = wDest / 2.0;
+  double halfH = hDest / 2.0;
+
+  POINT ptDest[3];
+  ptDest[0].x = (LONG)(centerX + (-halfW * c - -halfH * s));
+  ptDest[0].y = (LONG)(centerY + (-halfW * s + -halfH * c));
+  ptDest[1].x = (LONG)(centerX + ( halfW * c - -halfH * s));
+  ptDest[1].y = (LONG)(centerY + ( halfW * s + -halfH * c));
+  ptDest[2].x = (LONG)(centerX + (-halfW * c -  halfH * s));
+  ptDest[2].y = (LONG)(centerY + (-halfW * s +  halfH * c));
+
+  PlgBlt(hRotatedDC, ptDest, hScaledDC, 0, 0, wDest, hDest, NULL, 0, 0);
+
+  int xDraw = x + wDest / 2 - iCanvasSize / 2;
+  int yDraw = y + hDest / 2 - iCanvasSize / 2;
+  if (bTrans)
+    TransparentBlt(hDC, xDraw, yDraw, iCanvasSize, iCanvasSize,
+      hRotatedDC, 0, 0, iCanvasSize, iCanvasSize, crTransColor);
+  else
+    BitBlt(hDC, xDraw, yDraw, iCanvasSize, iCanvasSize,
+      hRotatedDC, 0, 0, SRCCOPY);
+
+  SelectObject(hRotatedDC, hOldRotatedBitmap);
+  DeleteObject(hRotatedBitmap);
+  DeleteDC(hRotatedDC);
+
+  SelectObject(hScaledDC, hOldScaledBitmap);
+  DeleteObject(hScaledBitmap);
+  DeleteDC(hScaledDC);
+
+  SelectObject(hSrcDC, hOldSrcBitmap);
+  DeleteDC(hSrcDC);
 }
 

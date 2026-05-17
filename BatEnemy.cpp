@@ -4,6 +4,10 @@
 #include <cstdlib>
 
 static const int BAT_TILE_SIZE = 64;
+static const int BAT_ANIM_DOWN = 0;
+static const int BAT_ANIM_RIGHT = 1;
+static const int BAT_ANIM_UP = 2;
+static const int BAT_ANIM_LEFT = 3;
 
 BatEnemy::BatEnemy(Bitmap* pBitmap, POINT ptPosition, RECT& rcBounds)
   : Enemy(pBitmap, ptPosition, rcBounds), m_ptHome(ptPosition),
@@ -14,7 +18,9 @@ BatEnemy::BatEnemy(Bitmap* pBitmap, POINT ptPosition, RECT& rcBounds)
   m_iDetectRange = -1;
   m_iForgetRange = -1;
   m_iAttackRange = -1;
-  SetNumFrames(2);
+  SetNumFrames(4);
+  SetFrameRows(4);
+  SetFrameRow(BAT_ANIM_DOWN);
   SetFrameDelay(4);
   SetScale(2.0);
   RefreshRandomPatrolRoute();
@@ -56,12 +62,11 @@ void BatEnemy::UpdatePatrol(Player* pPlayer)
   {
     RefreshRandomPatrolRoute();
     StopMoving();
-    FlipHorizontally(FALSE);
     return;
   }
 
-  FlipHorizontally(dx < 0);
   MoveToward(m_vPatrolRoute[m_iPatrolIndex], m_iMoveSpeed);
+  UpdateAnimationDirection();
 }
 
 void BatEnemy::UpdateForget(Player* pPlayer)
@@ -159,4 +164,21 @@ void BatEnemy::RefreshRandomPatrolRoute()
   std::vector<POINT> vRoute;
   vRoute.push_back(CreateRandomPointNearHome());
   SetPatrolRoute(vRoute);
+}
+
+void BatEnemy::UpdateAnimationDirection()
+{
+  POINT ptVelocity = GetVelocity();
+
+  if (ptVelocity.x == 0 && ptVelocity.y == 0)
+    return;
+
+  if (abs(ptVelocity.x) > abs(ptVelocity.y))
+  {
+    SetFrameRow((ptVelocity.x > 0) ? BAT_ANIM_RIGHT : BAT_ANIM_LEFT);
+  }
+  else
+  {
+    SetFrameRow((ptVelocity.y > 0) ? BAT_ANIM_DOWN : BAT_ANIM_UP);
+  }
 }

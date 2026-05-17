@@ -62,7 +62,7 @@ public:
 
   // General Methods
   virtual SPRITEACTION  Update();
-  void                  Draw(HDC hDC);
+  virtual void          Draw(HDC hDC);
   BOOL                  IsPointInside(int x, int y);
   BOOL                  TestCollision(Sprite* pTestSprite);
   void                  Kill()      { m_bDying = TRUE; };

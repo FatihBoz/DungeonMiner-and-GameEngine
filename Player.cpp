@@ -3,6 +3,8 @@
 
 #define TILE_SIZE 64
 
+// TODO: DEAL DAMAGE AND HEALTH SYSTEM GONNA IMPLEMENTED
+
 Player::Player(Bitmap* pBitmaps[4], RECT& rcBounds, BOUNDSACTION baBoundsAction)
   : Sprite(pBitmaps[0], rcBounds, baBoundsAction), m_iSpeed(8), m_iCurrentDir(PDIR_DOWN), m_bIsMoving(FALSE), m_bIsAttacking(FALSE), m_dScale(2.0)
 {

@@ -48,6 +48,8 @@ Bitmap*           _pSaucerBitmap;
 Bitmap*           _pGhostBitmap;
 Bitmap*				_pBatBitmap;
 Bitmap*           _pGolemBitmap;
+Bitmap*           _pSkeletonBitmap;
+Bitmap*           _pBoneBitmap;
 StarryBackground* _pBackground;
 Sprite*           _pAsteroids[3];
 Player*           _pPlayer;

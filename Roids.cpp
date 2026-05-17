@@ -399,7 +399,7 @@ void SpawnSkeletonProjectile(POINT ptStart, POINT ptTarget)
 {
   DebugSetPhase(TEXT("SpawnSkeletonProjectile"));
 
-  Bitmap* pProjectileBitmap = (_pSaucerBitmap != NULL) ? _pSaucerBitmap : _pAsteroidBitmap;
+  Bitmap* pProjectileBitmap = _pBoneBitmap;
   if (_pGame == NULL || pProjectileBitmap == NULL || _pMap == NULL)
     return;
 
@@ -415,7 +415,7 @@ void SpawnSkeletonEnemies()
 {
   DebugSetPhase(TEXT("SpawnSkeletonEnemies"));
 
-  Bitmap* pSkeletonBitmap = _pSaucerBitmap;
+  Bitmap* pSkeletonBitmap = _pSkeletonBitmap;
   if (_pGame == NULL || _pMap == NULL || pSkeletonBitmap == NULL)
     return;
 
@@ -427,8 +427,7 @@ void SpawnSkeletonEnemies()
   }
 
   RECT rcWorldBounds = { 0, 0, _pMap->GetCols() * TILE_SIZE, _pMap->GetRows() * TILE_SIZE };
-  POINT ptSpawn = { vRoute[0].x - pSkeletonBitmap->GetWidth() / 2,
-    vRoute[0].y - pSkeletonBitmap->GetHeight() / 2 };
+  POINT ptSpawn = { vRoute[0].x - 12, vRoute[0].y - 16 };
 
   SkeletonEnemy* pSkeleton = new SkeletonEnemy(pSkeletonBitmap, ptSpawn, rcWorldBounds);
   pSkeleton->SetPatrolRoute(vRoute);
@@ -597,8 +596,10 @@ void GameStart(HWND hWindow)
 
   // enemies
   _pGhostBitmap = new Bitmap(hDC, TEXT("bitmaps/ghost.bmp"));
-  _pBatBitmap = new Bitmap(hDC, TEXT("bitmaps/bat.bmp"));
+  _pBatBitmap = new Bitmap(hDC, TEXT("bitmaps/newbat.bmp"));
   _pGolemBitmap = new Bitmap(hDC, TEXT("bitmaps/golem.bmp"));
+  _pSkeletonBitmap = new Bitmap(hDC, TEXT("bitmaps/skeleton.bmp"));
+  _pBoneBitmap = new Bitmap(hDC, TEXT("bitmaps/bone.bmp"));
 
   // Load Ore Bitmaps in defined logical order (1 to 5)
   _pOreBitmaps[0] = new Bitmap(hDC, TEXT("bitmaps/IronOre.bmp"));
@@ -706,6 +707,10 @@ void GameEnd()
   _pBatBitmap = NULL;
   delete _pGolemBitmap;
   _pGolemBitmap = NULL;
+  delete _pSkeletonBitmap;
+  _pSkeletonBitmap = NULL;
+  delete _pBoneBitmap;
+  _pBoneBitmap = NULL;
 
   // Cleanup Ore Bitmaps
   for (int i = 0; i < 5; i++)

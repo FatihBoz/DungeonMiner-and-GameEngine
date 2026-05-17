@@ -135,12 +135,14 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="bitmaps\AmethystOre.bmp" />
+    <Image Include="bitmaps\bone.bmp" />
     <Image Include="bitmaps\DungeonTileset.bmp" />
     <Image Include="bitmaps\ghost.bmp" />
     <Image Include="bitmaps\GoldOre.bmp" />
     <Image Include="bitmaps\IronOre.bmp" />
     <Image Include="bitmaps\ObsidianOre.bmp" />
     <Image Include="bitmaps\RubyOre.bmp" />
+    <Image Include="bitmaps\skeleton.bmp" />
     <Image Include="Roids.ico" />
     <Image Include="Roids_sm.ico" />
     <Image Include="bitmaps\Saucer.bmp" />

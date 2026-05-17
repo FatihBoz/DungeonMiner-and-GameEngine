@@ -130,6 +130,12 @@
     <Image Include="Roids_sm.ico">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="bitmaps\skeleton.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="bitmaps\bone.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Roids.rc">
