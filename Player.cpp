@@ -1,12 +1,15 @@
 #include "Player.h"
+#include "Enemy.h"
 #include "ProceduralMapGeneration.h"
+#include <vector>
 
 #define TILE_SIZE 64
 
 // TODO: DEAL DAMAGE AND HEALTH SYSTEM GONNA IMPLEMENTED
 
 Player::Player(Bitmap* pBitmaps[4], RECT& rcBounds, BOUNDSACTION baBoundsAction)
-  : Sprite(pBitmaps[0], rcBounds, baBoundsAction), m_iSpeed(8), m_iCurrentDir(PDIR_DOWN), m_bIsMoving(FALSE), m_bIsAttacking(FALSE), m_dScale(2.0)
+  : Sprite(pBitmaps[0], rcBounds, baBoundsAction), m_iSpeed(8), m_iHealth(MAX_HEALTH),
+    m_iCurrentDir(PDIR_DOWN), m_bIsMoving(FALSE), m_bIsAttacking(FALSE), m_dScale(2.0)
 {
   // Store all 4 directional bitmaps and initialize attack storage
   for (int i = 0; i < 4; i++)
@@ -32,6 +35,12 @@ Player::~Player()
 
 void Player::HandleKeys()
 {
+  if (IsDead())
+  {
+    SetVelocity(0, 0);
+    return;
+  }
+
   // Lock user inputs and stop speed during an active attack swing
   if (m_bIsAttacking)
   {
@@ -59,31 +68,34 @@ void Player::HandleKeys()
   }
 
   POINT ptVelocity = { 0, 0 };
+  int iMoveSpeed = m_iSpeed;
+  if (GetAsyncKeyState(VK_SHIFT) < 0)
+    iMoveSpeed *= 3;
   m_bIsMoving = FALSE;
 
   // Check keyboard state and switch direction/active bitmap accordingly
   if (GetAsyncKeyState(VK_LEFT) < 0)
   {
-    ptVelocity.x -= m_iSpeed;
+    ptVelocity.x -= iMoveSpeed;
     m_iCurrentDir = PDIR_LEFT;
     m_bIsMoving = TRUE;
   }
   else if (GetAsyncKeyState(VK_RIGHT) < 0)
   {
-    ptVelocity.x += m_iSpeed;
+    ptVelocity.x += iMoveSpeed;
     m_iCurrentDir = PDIR_RIGHT;
     m_bIsMoving = TRUE;
   }
 
   if (GetAsyncKeyState(VK_UP) < 0)
   {
-    ptVelocity.y -= m_iSpeed;
+    ptVelocity.y -= iMoveSpeed;
     m_iCurrentDir = PDIR_UP;
     m_bIsMoving = TRUE;
   }
   else if (GetAsyncKeyState(VK_DOWN) < 0)
   {
-    ptVelocity.y += m_iSpeed;
+    ptVelocity.y += iMoveSpeed;
     m_iCurrentDir = PDIR_DOWN;
     m_bIsMoving = TRUE;
   }
@@ -92,7 +104,7 @@ void Player::HandleKeys()
   if (ptVelocity.x != 0 && ptVelocity.y != 0)
   {
     // Multiply base speed by 1/sqrt(2) ≈ 0.7071 and round to nearest integer
-    int diagSpeed = (int)(m_iSpeed * 0.707107 + 0.5);
+    int diagSpeed = (int)(iMoveSpeed * 0.707107 + 0.5);
     ptVelocity.x = (ptVelocity.x > 0) ? diagSpeed : -diagSpeed;
     ptVelocity.y = (ptVelocity.y > 0) ? diagSpeed : -diagSpeed;
   }
@@ -101,6 +113,35 @@ void Player::HandleKeys()
   m_pBitmap = m_pAnimationBitmaps[m_iCurrentDir];
 
   SetVelocity(ptVelocity);
+}
+
+void Player::Damage(int iDamage)
+{
+  if (iDamage <= 0 || IsDead())
+    return;
+
+  m_iHealth -= iDamage;
+  if (m_iHealth < 0)
+    m_iHealth = 0;
+
+  extern void AddFloatingText(int x, int y, const TCHAR* szText, COLORREF color);
+
+  RECT rc = GetPosition();
+  int x = rc.left + (rc.right - rc.left) / 2 - 28;
+  int y = rc.top - 36;
+  TCHAR szBuffer[32];
+  wsprintf(szBuffer, TEXT("HP %d/%d"), m_iHealth, MAX_HEALTH);
+  AddFloatingText(x, y, szBuffer, RGB(255, 60, 60));
+}
+
+void Player::Heal(int iAmount)
+{
+  if (iAmount <= 0 || IsDead())
+    return;
+
+  m_iHealth += iAmount;
+  if (m_iHealth > MAX_HEALTH)
+    m_iHealth = MAX_HEALTH;
 }
 
 SPRITEACTION Player::Update()
@@ -177,6 +218,7 @@ void Player::SetAttackBitmaps(Bitmap* pBitmaps[4])
 void Player::ExecuteAttackDamage()
 {
   extern ProceduralMapGeneration* _pMap;
+  extern std::vector<Enemy*> _vEnemies;
   if (_pMap == NULL) return;
 
   // 1. Retrieve center coordinate of the actual physical player hitbox
@@ -198,6 +240,27 @@ void Player::ExecuteAttackDamage()
     targetX += reach;
   else if (m_iCurrentDir == PDIR_UP)
     targetY -= reach;
+
+  RECT rcAttack = { targetX - 24, targetY - 24, targetX + 24, targetY + 24 };
+  for (size_t i = 0; i < _vEnemies.size(); i++)
+  {
+    Enemy* pEnemy = _vEnemies[i];
+    if (pEnemy == NULL || pEnemy->IsDead())
+      continue;
+
+    RECT rcHit;
+    RECT rcEnemy = pEnemy->GetCollision();
+    if (IntersectRect(&rcHit, &rcAttack, &rcEnemy))
+    {
+      pEnemy->Damage(1);
+
+      extern void AddFloatingText(int x, int y, const TCHAR* szText, COLORREF color);
+      int textX = rcEnemy.left + (rcEnemy.right - rcEnemy.left) / 2 - 16;
+      int textY = rcEnemy.top - 20;
+      AddFloatingText(textX, textY, TEXT("-1"), RGB(255, 230, 80));
+      return;
+    }
+  }
 
   // 3. Project mathematical point back into map tile space
   int r = targetY / TILE_SIZE;

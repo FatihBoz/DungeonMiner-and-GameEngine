@@ -12,7 +12,10 @@ enum PlayerDirection {
 class Player : public Sprite
 {
 private:
+  static const int MAX_HEALTH = 5;
+
   int              m_iSpeed;
+  int              m_iHealth;
   Bitmap*          m_pAnimationBitmaps[4]; // Down, Left, Right, Up
   Bitmap*          m_pAttackBitmaps[4];    // Attack Animations (Down, Left, Right, Up)
   PlayerDirection  m_iCurrentDir;
@@ -32,6 +35,11 @@ public:
 
   void HandleKeys();
   virtual SPRITEACTION Update() override; // Manage frame advances based on movement
+  void Damage(int iDamage);
+  void Heal(int iAmount);
+  int GetHealth() const { return m_iHealth; }
+  int GetMaxHealth() const { return MAX_HEALTH; }
+  BOOL IsDead() const { return m_iHealth <= 0; }
 
   // Setters for Attack bitmaps
   void SetAttackBitmaps(Bitmap* pBitmaps[4]);

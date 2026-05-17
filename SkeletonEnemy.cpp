@@ -9,15 +9,16 @@ static const int SKELETON_ANIM_UP = 0;
 static const int SKELETON_ANIM_RIGHT = 1;
 static const int SKELETON_ANIM_DOWN = 2;
 static const int SKELETON_ANIM_LEFT = 3;
+static const int SKELETON_FIRE_COOLDOWN_TICKS = 60;
 
 SkeletonEnemy::SkeletonEnemy(Bitmap* pBitmap, POINT ptPosition, RECT& rcBounds)
   : Enemy(pBitmap, ptPosition, rcBounds), m_iFireCooldown(0),
     m_iLastAnimationRow(SKELETON_ANIM_DOWN)
 {
-  m_iHealth = 2;
+  m_iHealth = 1;
   m_iMoveSpeed = 3;
-  m_iDetectRange = 100;
-  m_iForgetRange = 100;
+  m_iDetectRange = 300;
+  m_iForgetRange = 300;
   m_iAttackRange = 360;
   SetScale(2.0);
   SetNumFrames(3);
@@ -87,7 +88,7 @@ void SkeletonEnemy::UpdateAttack(Player* pPlayer)
   if (m_iFireCooldown <= 0)
   {
     OnAttack(pPlayer);
-    m_iFireCooldown = 24;
+    m_iFireCooldown = SKELETON_FIRE_COOLDOWN_TICKS;
   }
 }
 

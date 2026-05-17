@@ -397,6 +397,42 @@ void GameEngine::AddSpriteNow(Sprite* pSprite)
   }
 }
 
+BOOL GameEngine::RemoveSprite(Sprite* pSprite)
+{
+  if (pSprite == NULL)
+    return FALSE;
+
+  for (vector<Sprite*>::iterator siPendingSprite = m_vPendingSprites.begin();
+    siPendingSprite != m_vPendingSprites.end(); siPendingSprite++)
+  {
+    if (*siPendingSprite == pSprite)
+    {
+      delete (*siPendingSprite);
+      m_vPendingSprites.erase(siPendingSprite);
+      return TRUE;
+    }
+  }
+
+  if (m_bUpdatingSprites)
+  {
+    pSprite->Kill();
+    return FALSE;
+  }
+
+  for (vector<Sprite*>::iterator siSprite = m_vSprites.begin();
+    siSprite != m_vSprites.end(); siSprite++)
+  {
+    if (*siSprite == pSprite)
+    {
+      delete (*siSprite);
+      m_vSprites.erase(siSprite);
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
 void GameEngine::FlushPendingSprites()
 {
   for (vector<Sprite*>::iterator siSprite = m_vPendingSprites.begin();

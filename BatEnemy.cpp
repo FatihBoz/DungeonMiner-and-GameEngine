@@ -13,7 +13,7 @@ BatEnemy::BatEnemy(Bitmap* pBitmap, POINT ptPosition, RECT& rcBounds)
   : Enemy(pBitmap, ptPosition, rcBounds), m_ptHome(ptPosition),
     m_ptLastPosition(ptPosition), m_iStuckTicks(0)
 {
-  m_iHealth = 1;
+  m_iHealth = 2;
   m_iMoveSpeed = 6;
   m_iDetectRange = -1;
   m_iForgetRange = -1;

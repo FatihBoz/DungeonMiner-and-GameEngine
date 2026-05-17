@@ -10,7 +10,7 @@ TankGolemEnemy::TankGolemEnemy(Bitmap* pBitmap, POINT ptPosition, RECT& rcBounds
     m_iPathCols(0), m_iTileSize(64), m_iPathIndex(0),
     m_iPathRefreshTicks(0), m_bPathAttempted(FALSE)
 {
-  m_iHealth = 20;
+  m_iHealth = 5;
   m_iMoveSpeed = 2;
   m_iDetectRange = 800;
   m_iForgetRange = 800;

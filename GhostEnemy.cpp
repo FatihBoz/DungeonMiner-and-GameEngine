@@ -8,7 +8,7 @@ static const int GHOST_TILE_SIZE = 64;
 GhostEnemy::GhostEnemy(Bitmap* pBitmap, POINT ptPosition, RECT& rcBounds)
   : Enemy(pBitmap, ptPosition, rcBounds), m_ptHome(ptPosition)
 {
-  m_iHealth = 1;
+  m_iHealth = 3;
   m_iMoveSpeed = 4;
   m_iDetectRange = -1;
   m_iForgetRange = -1;

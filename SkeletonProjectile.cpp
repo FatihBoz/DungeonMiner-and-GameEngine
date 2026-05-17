@@ -44,8 +44,14 @@ SPRITEACTION SkeletonProjectile::Update()
   if (sa & SA_KILL)
     return sa;
 
-  if (MapCollision(this) || HitsPlayer())
+  if (MapCollision(this))
     return SA_KILL;
+
+  if (HitsPlayer())
+  {
+    _pPlayer->Damage(1);
+    return SA_KILL;
+  }
 
   return SA_NONE;
 }

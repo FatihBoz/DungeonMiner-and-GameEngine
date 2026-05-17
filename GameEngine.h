@@ -97,6 +97,7 @@ public:
   void                ReleaseJoystick();
   void                CheckJoystick();
   void                AddSprite(Sprite* pSprite);
+  BOOL                RemoveSprite(Sprite* pSprite);
   void                DrawSprites(HDC hDC);
   void                UpdateSprites();
   void                CleanupSprites();

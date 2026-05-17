@@ -75,6 +75,7 @@ void Enemy::TouchPlayer(Player* pPlayer)
   if (pPlayer == NULL || m_iTouchCooldown > 0)
     return;
 
+  pPlayer->Damage(1);
   OnTouchPlayer(pPlayer);
   m_iTouchCooldown = 30;
 }
