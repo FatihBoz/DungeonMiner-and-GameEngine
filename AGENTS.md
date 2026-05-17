@@ -30,6 +30,12 @@ Follow the existing C++ style: two-space indentation, braces on their own line f
 
 No automated tests are currently present. Validate changes by building `Debug|Win32` and manually exercising affected gameplay in the running executable. For deterministic logic such as map generation or inventory behavior, prefer extracting small testable helper functions before adding broad gameplay changes.
 
+## Debug System Notes
+
+`DebugSystem` is configurable at startup. Use `ROIDS_DEBUGSYSTEM=0` to keep it disabled, or `ROIDS_DEBUGSYSTEM=1` to force it on. When disabled, it should stay out of the hot path and not create log files or install exception hooks.
+
+When enabled, debug output is written under `DebugLogs/` with a `session_YYYYMMDD_HHMMSS.log` name. Use `DebugSetPhase()` and `DebugLogFormat()` for lightweight breadcrumbs around gameplay, collision, pathfinding, and exception handling.
+
 ## Commit & Pull Request Guidelines
 
 NEVER COMMIT YOURSELF. ONLY USER CAN COMMIT.

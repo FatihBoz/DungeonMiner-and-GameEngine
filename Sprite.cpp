@@ -17,6 +17,10 @@ Sprite::Sprite(Bitmap* pBitmap)
   m_pBitmap = pBitmap;
   m_iNumFrames = 1;
   m_iCurFrame = m_iFrameDelay = m_iFrameTrigger = 0;
+  m_iFrameRows = 1;
+  m_iCurFrameRow = 0;
+  m_dScale = 1.0;
+  m_bFlipHorizontally = FALSE;
   SetRect(&m_rcPosition, 0, 0, pBitmap->GetWidth(), pBitmap->GetHeight());
   CalcCollisionRect();
   m_ptVelocity.x = m_ptVelocity.y = 0;
@@ -38,6 +42,10 @@ Sprite::Sprite(Bitmap* pBitmap, RECT& rcBounds, BOUNDSACTION baBoundsAction)
   m_pBitmap = pBitmap;
   m_iNumFrames = 1;
   m_iCurFrame = m_iFrameDelay = m_iFrameTrigger = 0;
+  m_iFrameRows = 1;
+  m_iCurFrameRow = 0;
+  m_dScale = 1.0;
+  m_bFlipHorizontally = FALSE;
   SetRect(&m_rcPosition, iXPos, iYPos, iXPos + pBitmap->GetWidth(),
     iYPos + pBitmap->GetHeight());
   CalcCollisionRect();
@@ -57,6 +65,10 @@ Sprite::Sprite(Bitmap* pBitmap, POINT ptPosition, POINT ptVelocity, int iZOrder,
   m_pBitmap = pBitmap;
   m_iNumFrames = 1;
   m_iCurFrame = m_iFrameDelay = m_iFrameTrigger = 0;
+  m_iFrameRows = 1;
+  m_iCurFrameRow = 0;
+  m_dScale = 1.0;
+  m_bFlipHorizontally = FALSE;
   SetRect(&m_rcPosition, ptPosition.x, ptPosition.y, pBitmap->GetWidth(),
     pBitmap->GetHeight());
   CalcCollisionRect();
@@ -184,14 +196,47 @@ void Sprite::Draw(HDC hDC)
     if (m_iNumFrames == 1)
     {
       // Draw the single-frame bitmap scaled to fit destination size
-      m_pBitmap->DrawPartScaled(hDC, m_rcPosition.left, m_rcPosition.top,
-        wDest, hDest, 0, 0, m_pBitmap->GetWidth(), m_pBitmap->GetHeight(), TRUE);
+      if (m_bFlipHorizontally)
+      {
+        m_pBitmap->DrawPartScaledFlipped(hDC, m_rcPosition.left, m_rcPosition.top,
+          wDest, hDest, 0, 0, m_pBitmap->GetWidth(), m_pBitmap->GetHeight(), TRUE);
+      }
+      else
+      {
+        m_pBitmap->DrawPartScaled(hDC, m_rcPosition.left, m_rcPosition.top,
+          wDest, hDest, 0, 0, m_pBitmap->GetWidth(), m_pBitmap->GetHeight(), TRUE);
+      }
     }
     else
     {
       // Draw the selected animation slice scaled to fit destination size
-      m_pBitmap->DrawPartScaled(hDC, m_rcPosition.left, m_rcPosition.top,
-        wDest, hDest, m_iCurFrame * GetWidth(), 0, GetWidth(), GetHeight(), TRUE);
+      if (m_bFlipHorizontally)
+      {
+        m_pBitmap->DrawPartScaledFlipped(hDC, m_rcPosition.left, m_rcPosition.top,
+          wDest, hDest, m_iCurFrame * GetWidth(),
+          m_iCurFrameRow * GetHeight(), GetWidth(), GetHeight(), TRUE);
+      }
+      else
+      {
+        m_pBitmap->DrawPartScaled(hDC, m_rcPosition.left, m_rcPosition.top,
+          wDest, hDest, m_iCurFrame * GetWidth(),
+          m_iCurFrameRow * GetHeight(), GetWidth(), GetHeight(), TRUE);
+      }
     }
   }
+}
+
+void Sprite::SetScale(double dScale)
+{
+  m_dScale = dScale;
+
+  RECT rect = GetPosition();
+  rect.right = rect.left + (int)(GetWidth() * m_dScale);
+  rect.bottom = rect.top + (int)(GetHeight() * m_dScale);
+  SetPosition(rect);
+}
+
+void Sprite::FlipHorizontally(BOOL bFlip)
+{
+  m_bFlipHorizontally = bFlip;
 }

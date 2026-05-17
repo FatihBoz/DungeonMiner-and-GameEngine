@@ -34,6 +34,9 @@ protected:
   Bitmap*       m_pBitmap;
   int           m_iNumFrames, m_iCurFrame;
   int           m_iFrameDelay, m_iFrameTrigger;
+  int           m_iFrameRows, m_iCurFrameRow;
+  double        m_dScale;
+  BOOL          m_bFlipHorizontally;
   RECT          m_rcPosition,
                 m_rcCollision;
   POINT         m_ptVelocity;
@@ -67,7 +70,11 @@ public:
   // Accessor Methods
   Bitmap* GetBitmap()               { return m_pBitmap; };
   void    SetNumFrames(int iNumFrames, BOOL bOneCycle = FALSE);
+  void    SetFrameRows(int iFrameRows);
+  void    SetFrameRow(int iFrameRow);
   void    SetFrameDelay(int iFrameDelay) { m_iFrameDelay = iFrameDelay; };
+  void    SetScale(double dScale);
+  void    FlipHorizontally(BOOL bFlip);
   RECT&   GetPosition()             { return m_rcPosition; };
   void    SetPosition(int x, int y);
   void    SetPosition(POINT ptPosition);
@@ -85,7 +92,7 @@ public:
   void    SetHidden(BOOL bHidden)   { m_bHidden = bHidden; };
   int     GetWidth()
     { return (m_pBitmap->GetWidth() / m_iNumFrames); };
-  int     GetHeight()               { return m_pBitmap->GetHeight(); };
+  int     GetHeight()               { return (m_pBitmap->GetHeight() / m_iFrameRows); };
 };
 
 //-----------------------------------------------------------------
@@ -149,8 +156,32 @@ inline void Sprite::SetNumFrames(int iNumFrames, BOOL bOneCycle)
 
   // Recalculate the position
   RECT rect = GetPosition();
-  rect.right = rect.left + ((rect.right - rect.left) / iNumFrames);
+  rect.right = rect.left + (int)(GetWidth() * m_dScale);
   SetPosition(rect);
+}
+
+inline void Sprite::SetFrameRows(int iFrameRows)
+{
+  if (iFrameRows <= 0)
+    iFrameRows = 1;
+
+  m_iFrameRows = iFrameRows;
+  if (m_iCurFrameRow >= m_iFrameRows)
+    m_iCurFrameRow = 0;
+
+  RECT rect = GetPosition();
+  rect.bottom = rect.top + (int)(GetHeight() * m_dScale);
+  SetPosition(rect);
+}
+
+inline void Sprite::SetFrameRow(int iFrameRow)
+{
+  if (iFrameRow < 0)
+    iFrameRow = 0;
+  if (iFrameRow >= m_iFrameRows)
+    iFrameRow = m_iFrameRows - 1;
+
+  m_iCurFrameRow = iFrameRow;
 }
 
 inline void Sprite::SetPosition(int x, int y)

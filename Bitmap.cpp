@@ -188,3 +188,42 @@ void Bitmap::DrawPartScaled(HDC hDC, int x, int y, int wDest, int hDest,
   }
 }
 
+void Bitmap::DrawPartScaledFlipped(HDC hDC, int x, int y, int wDest, int hDest,
+  int xPart, int yPart, int wPart, int hPart, BOOL bTrans, COLORREF crTransColor)
+{
+  if (m_hBitmap != NULL)
+  {
+    HDC hSrcDC = CreateCompatibleDC(hDC);
+    HBITMAP hOldSrcBitmap = (HBITMAP)SelectObject(hSrcDC, m_hBitmap);
+
+    HDC hFlipDC = CreateCompatibleDC(hDC);
+    HBITMAP hFlipBitmap = CreateCompatibleBitmap(hDC, wPart, hPart);
+    HBITMAP hOldFlipBitmap = (HBITMAP)SelectObject(hFlipDC, hFlipBitmap);
+
+    HBRUSH hTransparentBrush = CreateSolidBrush(crTransColor);
+    RECT rcFlip = { 0, 0, wPart, hPart };
+    FillRect(hFlipDC, &rcFlip, hTransparentBrush);
+    DeleteObject(hTransparentBrush);
+
+    int oldFlipStretchMode = SetStretchBltMode(hFlipDC, COLORONCOLOR);
+    StretchBlt(hFlipDC, 0, 0, wPart, hPart, hSrcDC, xPart + wPart, yPart,
+      -wPart, hPart, SRCCOPY);
+    SetStretchBltMode(hFlipDC, oldFlipStretchMode);
+
+    int oldStretchMode = SetStretchBltMode(hDC, COLORONCOLOR);
+    if (bTrans)
+      TransparentBlt(hDC, x, y, wDest, hDest, hFlipDC, 0, 0, wPart, hPart,
+        crTransColor);
+    else
+      StretchBlt(hDC, x, y, wDest, hDest, hFlipDC, 0, 0, wPart, hPart, SRCCOPY);
+    SetStretchBltMode(hDC, oldStretchMode);
+
+    SelectObject(hFlipDC, hOldFlipBitmap);
+    DeleteObject(hFlipBitmap);
+    DeleteDC(hFlipDC);
+
+    SelectObject(hSrcDC, hOldSrcBitmap);
+    DeleteDC(hSrcDC);
+  }
+}
+

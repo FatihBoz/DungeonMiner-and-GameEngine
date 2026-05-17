@@ -13,6 +13,7 @@ GhostEnemy::GhostEnemy(Bitmap* pBitmap, POINT ptPosition, RECT& rcBounds)
   m_iDetectRange = -1;
   m_iForgetRange = -1;
   m_iAttackRange = -1;
+  SetScale(2.0);
   RefreshRandomPatrolRoute();
 }
 
@@ -38,6 +39,11 @@ void GhostEnemy::UpdatePatrol(Player* pPlayer)
   }
 
   MoveToward(m_vPatrolRoute[m_iPatrolIndex], m_iMoveSpeed);
+  POINT ptVelocity = GetVelocity();
+  if (ptVelocity.x < 0)
+    FlipHorizontally(TRUE);
+  else if (ptVelocity.x > 0)
+    FlipHorizontally(FALSE);
 }
 
 void GhostEnemy::UpdateForget(Player* pPlayer)

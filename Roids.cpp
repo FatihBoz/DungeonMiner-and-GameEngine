@@ -117,11 +117,167 @@ BOOL IsMapCollisionIgnored(Sprite* pSprite)
   return FALSE;
 }
 
+BOOL IsTankGolemPathTileBlocked(int row, int col, void* pContext)
+{
+  ProceduralMapGeneration* pMap = (ProceduralMapGeneration*)pContext;
+  if (pMap == NULL)
+    return TRUE;
+
+  return pMap->GetTile(row, col) != 0;
+}
+
+static BOOL IsOpenFloorTile(int row, int col)
+{
+  if (_pMap == NULL)
+    return FALSE;
+
+  return _pMap->GetTile(row, col) == 0;
+}
+
+static BOOL IsClearHorizontalPath(int row, int colA, int colB)
+{
+  int left = min(colA, colB);
+  int right = max(colA, colB);
+
+  for (int col = left + 1; col < right; col++)
+  {
+    if (!IsOpenFloorTile(row, col))
+      return FALSE;
+  }
+
+  return TRUE;
+}
+
+static BOOL IsClearVerticalPath(int col, int rowA, int rowB)
+{
+  int top = min(rowA, rowB);
+  int bottom = max(rowA, rowB);
+
+  for (int row = top + 1; row < bottom; row++)
+  {
+    if (!IsOpenFloorTile(row, col))
+      return FALSE;
+  }
+
+  return TRUE;
+}
+
+static BOOL TryCreateSkeletonRouteFromTile(int row, int col, std::vector<POINT>& vRoute)
+{
+  if (_pMap == NULL)
+    return FALSE;
+
+  if (!IsOpenFloorTile(row, col))
+    return FALSE;
+
+  const int minDistance = 4;
+  const int maxDistance = 10;
+
+  for (int distance = minDistance; distance <= maxDistance; distance++)
+  {
+    if (col + distance < _pMap->GetCols() - 1 &&
+      IsOpenFloorTile(row, col + distance) &&
+      IsClearHorizontalPath(row, col, col + distance))
+    {
+      POINT ptStart = { col * TILE_SIZE + TILE_SIZE / 2, row * TILE_SIZE + TILE_SIZE / 2 };
+      POINT ptEnd = { (col + distance) * TILE_SIZE + TILE_SIZE / 2, row * TILE_SIZE + TILE_SIZE / 2 };
+      vRoute.clear();
+      vRoute.push_back(ptStart);
+      vRoute.push_back(ptEnd);
+      return TRUE;
+    }
+
+    if (col - distance > 0 &&
+      IsOpenFloorTile(row, col - distance) &&
+      IsClearHorizontalPath(row, col, col - distance))
+    {
+      POINT ptStart = { col * TILE_SIZE + TILE_SIZE / 2, row * TILE_SIZE + TILE_SIZE / 2 };
+      POINT ptEnd = { (col - distance) * TILE_SIZE + TILE_SIZE / 2, row * TILE_SIZE + TILE_SIZE / 2 };
+      vRoute.clear();
+      vRoute.push_back(ptStart);
+      vRoute.push_back(ptEnd);
+      return TRUE;
+    }
+
+    if (row + distance < _pMap->GetRows() - 1 &&
+      IsOpenFloorTile(row + distance, col) &&
+      IsClearVerticalPath(col, row, row + distance))
+    {
+      POINT ptStart = { col * TILE_SIZE + TILE_SIZE / 2, row * TILE_SIZE + TILE_SIZE / 2 };
+      POINT ptEnd = { col * TILE_SIZE + TILE_SIZE / 2, (row + distance) * TILE_SIZE + TILE_SIZE / 2 };
+      vRoute.clear();
+      vRoute.push_back(ptStart);
+      vRoute.push_back(ptEnd);
+      return TRUE;
+    }
+
+    if (row - distance > 0 &&
+      IsOpenFloorTile(row - distance, col) &&
+      IsClearVerticalPath(col, row, row - distance))
+    {
+      POINT ptStart = { col * TILE_SIZE + TILE_SIZE / 2, row * TILE_SIZE + TILE_SIZE / 2 };
+      POINT ptEnd = { col * TILE_SIZE + TILE_SIZE / 2, (row - distance) * TILE_SIZE + TILE_SIZE / 2 };
+      vRoute.clear();
+      vRoute.push_back(ptStart);
+      vRoute.push_back(ptEnd);
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+static BOOL CreateSkeletonPatrolRoute(std::vector<POINT>& vRoute)
+{
+  vRoute.clear();
+
+  if (_pMap == NULL)
+    return FALSE;
+
+  if (_pPlayer != NULL)
+  {
+    RECT rcPlayer = _pPlayer->GetPosition();
+    int playerCol = (rcPlayer.left + (rcPlayer.right - rcPlayer.left) / 2) / TILE_SIZE;
+    int playerRow = (rcPlayer.top + (rcPlayer.bottom - rcPlayer.top) / 2) / TILE_SIZE;
+
+    for (int radius = 2; radius <= 5; radius++)
+    {
+      for (int dy = -radius; dy <= radius; dy++)
+      {
+        for (int dx = -radius; dx <= radius; dx++)
+        {
+          if (abs(dx) != radius && abs(dy) != radius)
+            continue;
+
+          int row = playerRow + dy;
+          int col = playerCol + dx;
+          if (row <= 0 || row >= _pMap->GetRows() - 1 ||
+            col <= 0 || col >= _pMap->GetCols() - 1)
+            continue;
+
+          if (TryCreateSkeletonRouteFromTile(row, col, vRoute))
+            return TRUE;
+        }
+      }
+    }
+  }
+
+  for (int attempt = 0; attempt < 250; attempt++)
+  {
+    int row = 1 + (rand() % (_pMap->GetRows() - 2));
+    int col = 1 + (rand() % (_pMap->GetCols() - 2));
+    if (TryCreateSkeletonRouteFromTile(row, col, vRoute))
+      return TRUE;
+  }
+
+  return FALSE;
+}
+
 void SpawnBatEnemies()
 {
   DebugSetPhase(TEXT("SpawnBatEnemies"));
 
-  if (_pGame == NULL || _pMap == NULL || _pSaucerBitmap == NULL)
+  if (_pGame == NULL || _pMap == NULL || _pGolemBitmap == NULL)
     return;
 
   RECT rcWorldBounds = { 0, 0, _pMap->GetCols() * TILE_SIZE, _pMap->GetRows() * TILE_SIZE };
@@ -148,8 +304,8 @@ void SpawnBatEnemies()
           if (_pMap->GetTile(row, col) != 0)
             continue;
 
-          ptSpawn.x = col * TILE_SIZE + TILE_SIZE / 4;
-          ptSpawn.y = row * TILE_SIZE + TILE_SIZE / 4;
+      ptSpawn.x = col * TILE_SIZE;
+      ptSpawn.y = row * TILE_SIZE;
           bFoundSpawn = TRUE;
         }
       }
@@ -181,7 +337,7 @@ void SpawnBatEnemies()
     break;
   }
 
-  BatEnemy* pBat = new BatEnemy(_pSaucerBitmap, ptSpawn, rcWorldBounds);
+  BatEnemy* pBat = new BatEnemy(_pBatBitmap, ptSpawn, rcWorldBounds);
   pBat->SetZOrder(1);
   _vEnemies.push_back(pBat);
   _pGame->AddSprite(pBat);
@@ -230,13 +386,142 @@ void SpawnGhostEnemies()
     col = _pMap->GetCols() - 1;
 
   POINT ptSpawn = { col * TILE_SIZE + TILE_SIZE / 4, row * TILE_SIZE + TILE_SIZE / 4 };
-  GhostEnemy* pGhost = new GhostEnemy(_pSaucerBitmap, ptSpawn, rcWorldBounds);
+  GhostEnemy* pGhost = new GhostEnemy(_pGhostBitmap, ptSpawn, rcWorldBounds);
   pGhost->SetZOrder(1);
   _vEnemies.push_back(pGhost);
   IgnoreMapCollision(pGhost);
   _pGame->AddSprite(pGhost);
   DebugLogFormat(TEXT("spawn Ghost sprite=0x%p pos=(%ld,%ld) enemies=%u"),
     pGhost, ptSpawn.x, ptSpawn.y, (unsigned int)_vEnemies.size());
+}
+
+void SpawnSkeletonProjectile(POINT ptStart, POINT ptTarget)
+{
+  DebugSetPhase(TEXT("SpawnSkeletonProjectile"));
+
+  Bitmap* pProjectileBitmap = (_pSaucerBitmap != NULL) ? _pSaucerBitmap : _pAsteroidBitmap;
+  if (_pGame == NULL || pProjectileBitmap == NULL || _pMap == NULL)
+    return;
+
+  RECT rcWorldBounds = { 0, 0, _pMap->GetCols() * TILE_SIZE, _pMap->GetRows() * TILE_SIZE };
+  SkeletonProjectile* pShot = new SkeletonProjectile(pProjectileBitmap, ptStart, ptTarget, rcWorldBounds);
+  pShot->SetZOrder(2);
+  _pGame->AddSprite(pShot);
+  DebugLogFormat(TEXT("spawn SkeletonProjectile sprite=0x%p start=(%ld,%ld) target=(%ld,%ld)"),
+    pShot, ptStart.x, ptStart.y, ptTarget.x, ptTarget.y);
+}
+
+void SpawnSkeletonEnemies()
+{
+  DebugSetPhase(TEXT("SpawnSkeletonEnemies"));
+
+  Bitmap* pSkeletonBitmap = _pSaucerBitmap;
+  if (_pGame == NULL || _pMap == NULL || pSkeletonBitmap == NULL)
+    return;
+
+  std::vector<POINT> vRoute;
+  if (!CreateSkeletonPatrolRoute(vRoute) || vRoute.size() < 2)
+  {
+    DebugLogEvent(TEXT("spawn Skeleton failed: no patrol route"));
+    return;
+  }
+
+  RECT rcWorldBounds = { 0, 0, _pMap->GetCols() * TILE_SIZE, _pMap->GetRows() * TILE_SIZE };
+  POINT ptSpawn = { vRoute[0].x - pSkeletonBitmap->GetWidth() / 2,
+    vRoute[0].y - pSkeletonBitmap->GetHeight() / 2 };
+
+  SkeletonEnemy* pSkeleton = new SkeletonEnemy(pSkeletonBitmap, ptSpawn, rcWorldBounds);
+  pSkeleton->SetPatrolRoute(vRoute);
+  pSkeleton->SetPosition(ptSpawn);
+  pSkeleton->SetZOrder(1);
+  _vEnemies.push_back(pSkeleton);
+  _pGame->AddSprite(pSkeleton);
+  DebugLogFormat(TEXT("spawn Skeleton sprite=0x%p pos=(%ld,%ld) routeStart=(%ld,%ld) routeEnd=(%ld,%ld) enemies=%u"),
+    pSkeleton, ptSpawn.x, ptSpawn.y,
+    vRoute[0].x, vRoute[0].y, vRoute[1].x, vRoute[1].y,
+    (unsigned int)_vEnemies.size());
+}
+
+void SpawnTankGolemEnemies()
+{
+  DebugSetPhase(TEXT("SpawnTankGolemEnemies"));
+
+  if (_pGame == NULL || _pMap == NULL || _pSaucerBitmap == NULL)
+    return;
+
+  RECT rcWorldBounds = { 0, 0, _pMap->GetCols() * TILE_SIZE, _pMap->GetRows() * TILE_SIZE };
+  POINT ptSpawn = { 0, 0 };
+  BOOL bFoundSpawn = FALSE;
+  BOOL bNearPlayerSpawn = FALSE;
+
+  if (_pPlayer != NULL)
+  {
+    RECT rcPlayer = _pPlayer->GetPosition();
+    int playerCol = (rcPlayer.left + (rcPlayer.right - rcPlayer.left) / 2) / TILE_SIZE;
+    int playerRow = (rcPlayer.top + (rcPlayer.bottom - rcPlayer.top) / 2) / TILE_SIZE;
+
+    for (int radius = 3; radius <= 6 && !bFoundSpawn; radius++)
+    {
+      for (int dy = -radius; dy <= radius && !bFoundSpawn; dy++)
+      {
+        for (int dx = -radius; dx <= radius && !bFoundSpawn; dx++)
+        {
+          if (abs(dx) != radius && abs(dy) != radius)
+            continue;
+
+          int row = playerRow + dy;
+          int col = playerCol + dx;
+          if (_pMap->GetTile(row, col) != 0)
+            continue;
+
+          ptSpawn.x = col * TILE_SIZE;
+          ptSpawn.y = row * TILE_SIZE;
+          bFoundSpawn = TRUE;
+          bNearPlayerSpawn = TRUE;
+        }
+      }
+    }
+  }
+
+  for (int attempt = 0; attempt < 300 && !bFoundSpawn; attempt++)
+  {
+    int row = rand() % _pMap->GetRows();
+    int col = rand() % _pMap->GetCols();
+    if (_pMap->GetTile(row, col) != 0)
+      continue;
+
+    if (_pPlayer != NULL)
+    {
+      RECT rcPlayer = _pPlayer->GetPosition();
+      int playerCol = (rcPlayer.left + (rcPlayer.right - rcPlayer.left) / 2) / TILE_SIZE;
+      int playerRow = (rcPlayer.top + (rcPlayer.bottom - rcPlayer.top) / 2) / TILE_SIZE;
+      int dx = playerCol - col;
+      int dy = playerRow - row;
+      if ((dx * dx + dy * dy) < 100)
+        continue;
+    }
+
+    ptSpawn.x = col * TILE_SIZE;
+    ptSpawn.y = row * TILE_SIZE;
+    bFoundSpawn = TRUE;
+  }
+
+  if (!bFoundSpawn)
+  {
+    DebugLogEvent(TEXT("spawn TankGolem failed: no open spawn tile"));
+    return;
+  }
+
+  TankGolemEnemy* pGolem = new TankGolemEnemy(_pGolemBitmap, ptSpawn, rcWorldBounds);
+  pGolem->ConfigurePathfinding(_pMap->GetRows(), _pMap->GetCols(), TILE_SIZE,
+    IsTankGolemPathTileBlocked, _pMap);
+  pGolem->SetZOrder(1);
+  _vEnemies.push_back(pGolem);
+  _pGame->AddSprite(pGolem);
+  DebugLogFormat(TEXT("spawn TankGolem sprite=0x%p pos=(%ld,%ld) mode=%s enemies=%u"),
+    pGolem, ptSpawn.x, ptSpawn.y,
+    bNearPlayerSpawn ? TEXT("near-player") : TEXT("fallback-random"),
+    (unsigned int)_vEnemies.size());
 }
 
 void DescendLevel()
@@ -283,6 +568,8 @@ void DescendLevel()
 
   SpawnBatEnemies();
   SpawnGhostEnemies();
+  SpawnSkeletonEnemies();
+  SpawnTankGolemEnemies();
   DebugLogFormat(TEXT("DescendLevel complete level=%d player=(%d,%d)"),
     nextLevel, spawnX, spawnY);
 }
@@ -307,6 +594,11 @@ void GameStart(HWND hWindow)
   _pSaucerBitmap = new Bitmap(hDC, IDB_SAUCER, _hInstance);
   _pTilesetBitmap = new Bitmap(hDC, TEXT("bitmaps/DungeonTileset.bmp"));
   _pStairsBitmap = new Bitmap(hDC, TEXT("bitmaps/stairs.bmp"));
+
+  // enemies
+  _pGhostBitmap = new Bitmap(hDC, TEXT("bitmaps/ghost.bmp"));
+  _pBatBitmap = new Bitmap(hDC, TEXT("bitmaps/bat.bmp"));
+  _pGolemBitmap = new Bitmap(hDC, TEXT("bitmaps/golem.bmp"));
 
   // Load Ore Bitmaps in defined logical order (1 to 5)
   _pOreBitmaps[0] = new Bitmap(hDC, TEXT("bitmaps/IronOre.bmp"));
@@ -358,6 +650,8 @@ void GameStart(HWND hWindow)
 
   SpawnBatEnemies();
   SpawnGhostEnemies();
+  SpawnSkeletonEnemies();
+  SpawnTankGolemEnemies();
   DebugLogFormat(TEXT("GameStart spawned enemies=%u"), (unsigned int)_vEnemies.size());
 
   // Initialize the dynamic lighting system (Encapsulated!)
@@ -369,12 +663,25 @@ void GameStart(HWND hWindow)
 
 void GameEnd()
 {
+  static BOOL s_bGameEnded = FALSE;
+  if (s_bGameEnded)
+    return;
+  s_bGameEnded = TRUE;
+
   DebugSetPhase(TEXT("GameEnd"));
   DebugLogEvent(TEXT("GameEnd begin"));
 
   // Cleanup the offscreen device context and bitmap
-  DeleteObject(_hOffscreenBitmap);
-  DeleteDC(_hOffscreenDC);  
+  if (_hOffscreenBitmap != NULL)
+  {
+    DeleteObject(_hOffscreenBitmap);
+    _hOffscreenBitmap = NULL;
+  }
+  if (_hOffscreenDC != NULL)
+  {
+    DeleteDC(_hOffscreenDC);
+    _hOffscreenDC = NULL;
+  }
 
   // Cleanup sprites before deleting shared bitmap resources they reference
   if (_pGame != NULL)
@@ -384,25 +691,52 @@ void GameEnd()
 
   // Cleanup the asteroid, saucer, and tileset bitmaps
   delete _pAsteroidBitmap;
+  _pAsteroidBitmap = NULL;
   delete _pSaucerBitmap;
+  _pSaucerBitmap = NULL;
   delete _pTilesetBitmap;
+  _pTilesetBitmap = NULL;
   delete _pStairsBitmap;
-  
+  _pStairsBitmap = NULL;
+
+  // enemies
+  delete _pGhostBitmap;
+  _pGhostBitmap = NULL;
+  delete _pBatBitmap;
+  _pBatBitmap = NULL;
+  delete _pGolemBitmap;
+  _pGolemBitmap = NULL;
+
   // Cleanup Ore Bitmaps
-  for (int i = 0; i < 5; i++) delete _pOreBitmaps[i];
+  for (int i = 0; i < 5; i++)
+  {
+    delete _pOreBitmaps[i];
+    _pOreBitmaps[i] = NULL;
+  }
 
   // Cleanup Player Animation Bitmaps
-  for (int i = 0; i < 4; i++) delete _pPlayerBitmaps[i];
-  for (int i = 0; i < 4; i++) delete _pPlayerAttackBitmaps[i];
+  for (int i = 0; i < 4; i++)
+  {
+    delete _pPlayerBitmaps[i];
+    _pPlayerBitmaps[i] = NULL;
+  }
+  for (int i = 0; i < 4; i++)
+  {
+    delete _pPlayerAttackBitmaps[i];
+    _pPlayerAttackBitmaps[i] = NULL;
+  }
 
   // Cleanup the light mask system
   delete _pLightMask;
+  _pLightMask = NULL;
 
   // Cleanup the map
   delete _pMap;
+  _pMap = NULL;
 
   // Cleanup the background
   delete _pBackground;
+  _pBackground = NULL;
 
   // Cleanup the game engine
   delete _pGame;

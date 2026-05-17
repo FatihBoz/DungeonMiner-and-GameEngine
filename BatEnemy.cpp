@@ -14,6 +14,9 @@ BatEnemy::BatEnemy(Bitmap* pBitmap, POINT ptPosition, RECT& rcBounds)
   m_iDetectRange = -1;
   m_iForgetRange = -1;
   m_iAttackRange = -1;
+  SetNumFrames(2);
+  SetFrameDelay(4);
+  SetScale(2.0);
   RefreshRandomPatrolRoute();
 }
 
@@ -53,9 +56,11 @@ void BatEnemy::UpdatePatrol(Player* pPlayer)
   {
     RefreshRandomPatrolRoute();
     StopMoving();
+    FlipHorizontally(FALSE);
     return;
   }
 
+  FlipHorizontally(dx < 0);
   MoveToward(m_vPatrolRoute[m_iPatrolIndex], m_iMoveSpeed);
 }
 

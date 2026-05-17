@@ -30,7 +30,10 @@ struct FloatingText {
 #include "Enemy.h"
 #include "BatEnemy.h"
 #include "GhostEnemy.h"
+#include "SkeletonEnemy.h"
+#include "SkeletonProjectile.h"
 #include "DebugSystem.h"
+#include "TankGolemEnemy.h"
 
 //-----------------------------------------------------------------
 // Global Variables
@@ -41,6 +44,10 @@ HDC               _hOffscreenDC;
 HBITMAP           _hOffscreenBitmap;
 Bitmap*           _pAsteroidBitmap;
 Bitmap*           _pSaucerBitmap;
+// enemies bitmap
+Bitmap*           _pGhostBitmap;
+Bitmap*				_pBatBitmap;
+Bitmap*           _pGolemBitmap;
 StarryBackground* _pBackground;
 Sprite*           _pAsteroids[3];
 Player*           _pPlayer;
@@ -68,7 +75,11 @@ void DescendLevel();
 void ClearEnemies();
 void SpawnBatEnemies();
 void SpawnGhostEnemies();
+void SpawnSkeletonEnemies();
+void SpawnTankGolemEnemies();
+void SpawnSkeletonProjectile(POINT ptStart, POINT ptTarget);
 void UntrackEnemy(Sprite* pSprite);
 Enemy* GetTrackedEnemy(Sprite* pSprite);
 void IgnoreMapCollision(Sprite* pSprite);
 BOOL IsMapCollisionIgnored(Sprite* pSprite);
+BOOL IsTankGolemPathTileBlocked(int row, int col, void* pContext);

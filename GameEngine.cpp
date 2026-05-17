@@ -36,6 +36,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     if (!GameEngine::GetEngine()->Initialize(iCmdShow))
     {
       DebugLogEvent(TEXT("GameEngine::Initialize failed"));
+      GameEnd();
       DebugShutdown();
       return FALSE;
     }
@@ -75,6 +76,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
       }
     }
     DebugLogFormat(TEXT("WinMain exiting normally code=%d"), (int)msg.wParam);
+    GameEnd();
     DebugShutdown();
     return (int)msg.wParam;
   }
@@ -146,6 +148,8 @@ GameEngine::GameEngine(HINSTANCE hInstance, LPTSTR szWindowClass,
   m_bSleep = TRUE;
   m_uiJoystickID = 0;
   m_vSprites.reserve(50);
+  m_vPendingSprites.reserve(16);
+  m_bUpdatingSprites = FALSE;
   m_uiMIDIPlayerID = 0;
 }
 
@@ -266,7 +270,6 @@ LRESULT GameEngine::HandleEvent(HWND hWindow, UINT msg, WPARAM wParam, LPARAM lP
 
     case WM_DESTROY:
       // End the game and exit the application
-      GameEnd();
       PostQuitMessage(0);
       return 0;
   }
@@ -354,6 +357,20 @@ void GameEngine::CheckJoystick()
 
 void GameEngine::AddSprite(Sprite* pSprite)
 {
+  if (pSprite == NULL)
+    return;
+
+  if (m_bUpdatingSprites)
+  {
+    m_vPendingSprites.push_back(pSprite);
+    return;
+  }
+
+  AddSpriteNow(pSprite);
+}
+
+void GameEngine::AddSpriteNow(Sprite* pSprite)
+{
   // Add a sprite to the sprite vector
   if (pSprite != NULL)
   {
@@ -376,6 +393,17 @@ void GameEngine::AddSprite(Sprite* pSprite)
   }
 }
 
+void GameEngine::FlushPendingSprites()
+{
+  for (vector<Sprite*>::iterator siSprite = m_vPendingSprites.begin();
+    siSprite != m_vPendingSprites.end(); siSprite++)
+  {
+    AddSpriteNow(*siSprite);
+  }
+
+  m_vPendingSprites.clear();
+}
+
 void GameEngine::DrawSprites(HDC hDC)
 {
   // Draw the sprites in the sprite vector
@@ -392,6 +420,7 @@ void GameEngine::UpdateSprites()
   RECT          rcOldSpritePos;
   SPRITEACTION  saSpriteAction;
   vector<Sprite*>::iterator siSprite;
+  m_bUpdatingSprites = TRUE;
   for (siSprite = m_vSprites.begin(); siSprite != m_vSprites.end(); /* siSprite++ */ )
   {
     // Save the old sprite position in case we need to restore it
@@ -422,10 +451,20 @@ void GameEngine::UpdateSprites()
       (*siSprite)->SetPosition(rcOldSpritePos);  // Restore the old sprite position
 	siSprite++;
   }
+  m_bUpdatingSprites = FALSE;
+  FlushPendingSprites();
 }
 
 void GameEngine::CleanupSprites()
 {
+  for (vector<Sprite*>::iterator siPendingSprite = m_vPendingSprites.begin();
+    siPendingSprite != m_vPendingSprites.end(); siPendingSprite++)
+  {
+    delete (*siPendingSprite);
+  }
+  m_vPendingSprites.clear();
+  m_bUpdatingSprites = FALSE;
+
   // Delete and remove the sprites in the sprite vector
   vector<Sprite*>::iterator siSprite;
   for (siSprite = m_vSprites.begin(); siSprite != m_vSprites.end(); /* siSprite++ */)

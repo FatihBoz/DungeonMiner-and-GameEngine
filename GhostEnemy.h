@@ -6,7 +6,6 @@ class GhostEnemy : public Enemy
 {
 private:
   POINT m_ptHome;
-
   POINT CreateRandomPointNearHome() const;
   void  RefreshRandomPatrolRoute();
 

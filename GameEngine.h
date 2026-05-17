@@ -71,10 +71,14 @@ protected:
   UINT                m_uiJoystickID;
   RECT                m_rcJoystickTrip;
   vector<Sprite*>     m_vSprites;
+  vector<Sprite*>     m_vPendingSprites;
+  BOOL                m_bUpdatingSprites;
   UINT                m_uiMIDIPlayerID;
 
   // Helper Methods
   BOOL                CheckSpriteCollision(Sprite* pTestSprite);
+  void                AddSpriteNow(Sprite* pSprite);
+  void                FlushPendingSprites();
 
 public:
   // Constructor(s)/Destructor
