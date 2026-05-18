@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------
-// Roids 2 Application
+// Dungeon Miner Application
 // C++ Source - DungeonMiner.cpp
 //-----------------------------------------------------------------
 
@@ -9,7 +9,7 @@
 #include "DungeonMiner.h"
 #include <cmath>
 #include <cstdlib>
-#include <mmsystem.h>
+//#include <mmsystem.h>
 
 #pragma comment(lib, "Msimg32.lib")
 
@@ -23,8 +23,8 @@
 BOOL GameInitialize(HINSTANCE hInstance)
 {
   // Create the game engine
-  _pGame = new GameEngine(hInstance, TEXT("Roids 2"),
-    TEXT("Roids 2"), IDI_ROIDS, IDI_ROIDS_SM, 1280, 720);
+  _pGame = new GameEngine(hInstance, TEXT("Dungeon Miner"),
+    TEXT("Dungeon Miner"), IDI_ROIDS, IDI_ROIDS_SM, 1280, 720);
   if (_pGame == NULL)
     return FALSE;
 
@@ -300,7 +300,7 @@ void SpawnGhostEnemies()
 {
   DebugSetPhase(TEXT("SpawnGhostEnemies"));
 
-  if (_pGame == NULL || _pMap == NULL || _pSaucerBitmap == NULL)
+  if (_pGame == NULL || _pMap == NULL || _pGhostBitmap == NULL)
     return;
 
   RECT rcWorldBounds = { 0, 0, _pMap->GetCols() * TILE_SIZE, _pMap->GetRows() * TILE_SIZE };
@@ -333,7 +333,7 @@ void SpawnSkeletonProjectile(POINT ptStart, POINT ptTarget)
   SkeletonProjectile* pShot = new SkeletonProjectile(pProjectileBitmap, ptStart, ptTarget, rcWorldBounds);
   pShot->SetZOrder(2);
   _pGame->AddSprite(pShot);
-  PlaySound(TEXT("Sounds\\swing.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
+  //PlaySound(TEXT("Sounds\\swing.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
   DebugLogFormat(TEXT("spawn SkeletonProjectile sprite=0x%p start=(%ld,%ld) target=(%ld,%ld)"),
     pShot, ptStart.x, ptStart.y, ptTarget.x, ptTarget.y);
 }
@@ -399,25 +399,18 @@ void SpawnTankGolemEnemies()
     (unsigned int)_vEnemies.size());
 }
 
-static int GetDepthScaledCount(int level, int interval, int maxCount)
-{
-  if (level < 1)
-    level = 1;
-
-  int count = 1 + ((level - 1) / interval);
-  return min(count, maxCount);
-}
-
 void SpawnEnemiesForCurrentLevel()
 {
   if (_pMap == NULL)
     return;
 
   int level = _pMap->GetLevel();
-  int batCount = GetDepthScaledCount(level, 1, 8);
-  int ghostCount = GetDepthScaledCount(level, 2, 5);
-  int skeletonCount = GetDepthScaledCount(level, 2, 5);
-  int golemCount = GetDepthScaledCount(level, 4, 3);
+  int count = level + 2;
+
+  int batCount = count;
+  int ghostCount = count;
+  int skeletonCount = (level >= 2) ? count : 0;
+  int golemCount = (level >= 3) ? count : 0;
 
   DebugLogFormat(TEXT("SpawnEnemiesForCurrentLevel level=%d bat=%d ghost=%d skeleton=%d golem=%d"),
     level, batCount, ghostCount, skeletonCount, golemCount);
@@ -495,10 +488,9 @@ void GameStart(HWND hWindow)
     _pGame->GetWidth(), _pGame->GetHeight());
   SelectObject(_hOffscreenDC, _hOffscreenBitmap);
 
-  // Create and load the asteroid and saucer bitmaps
+  // Create and load the asteroid bitmap
   HDC hDC = GetDC(hWindow);
   _pAsteroidBitmap = new Bitmap(hDC, IDB_ASTEROID, _hInstance);
-  _pSaucerBitmap = new Bitmap(hDC, IDB_SAUCER, _hInstance);
   _pTilesetBitmap = new Bitmap(hDC, TEXT("bitmaps/DungeonTileset.bmp"));
   _pStairsBitmap = new Bitmap(hDC, TEXT("bitmaps/stairs.bmp"));
   _pToolIconsBitmap = new Bitmap(hDC, TEXT("bitmaps/sword_pickaxe_icons.bmp"));
@@ -590,11 +582,9 @@ static void CleanupGameResources(BOOL bDeleteGameEngine)
   _vMapCollisionIgnoredSprites.clear();
   _vFloatingTexts.clear();
 
-  // Cleanup the asteroid, saucer, and tileset bitmaps
+  // Cleanup the asteroid and tileset bitmaps
   delete _pAsteroidBitmap;
   _pAsteroidBitmap = NULL;
-  delete _pSaucerBitmap;
-  _pSaucerBitmap = NULL;
   delete _pTilesetBitmap;
   _pTilesetBitmap = NULL;
   delete _pStairsBitmap;
@@ -733,15 +723,14 @@ void GamePaint(HDC hDC)
     }
   }
 
-  // Draw the sprites (which live in world coords, so they are automatically offset too!)
+  // Draw the sprites (which live in world coords, so they are automatically offset too)
   _pGame->DrawSprites(hDC);
 
-  // --- AYDINLATMA SİSTEMİ ---
   if (_pPlayer != NULL && _pLightMask != NULL)
   {
-    RECT rcSaucer = _pPlayer->GetPosition();
-    int cx = rcSaucer.left + (rcSaucer.right - rcSaucer.left) / 2;
-    int cy = rcSaucer.top + (rcSaucer.bottom - rcSaucer.top) / 2;
+    RECT rcPlayer = _pPlayer->GetPosition();
+    int cx = rcPlayer.left + (rcPlayer.right - rcPlayer.left) / 2;
+    int cy = rcPlayer.top + (rcPlayer.bottom - rcPlayer.top) / 2;
     
     _pLightMask->Draw(hDC, cx, cy);
   }
@@ -1033,9 +1022,9 @@ void GameCycle()
     DebugSetPhase(TEXT("GameCycle.UpdateSprites"));
     _pGame->UpdateSprites();
 
-    // Update the saucer to help it dodge the asteroids
-    DebugSetPhase(TEXT("GameCycle.UpdateSaucer"));
-    UpdateSaucer();
+    // Update the camera to track the player
+    DebugSetPhase(TEXT("GameCycle.UpdateCamera"));
+    UpdateCamera();
   }
 
   // Update active Floating Texts (float upward and decrement lifetimes)
@@ -1103,7 +1092,7 @@ void HandleKeys()
       if (_pMap != NULL && _pMap->GetTile(r, c) == 6)
       {
         DebugLogFormat(TEXT("stairs trigger tile=(%d,%d)"), r, c);
-        PlaySound(TEXT("Sounds\\ladder.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
+        //PlaySound(TEXT("Sounds\\ladder.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
         DescendLevel();
       }
     }
@@ -1143,7 +1132,7 @@ void MouseButtonDown(int x, int y, BOOL bLeft)
           {
             _pPlayer->GetInventory().RemoveItem(nextLevel, cost);
             _pPlayer->UpgradeTool(i);
-            PlaySound(TEXT("Sounds\\pickup.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
+            //PlaySound(TEXT("Sounds\\pickup.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
           }
         }
       }
@@ -1255,20 +1244,20 @@ void SpriteDying(Sprite* pSprite)
 // Functions
 //-----------------------------------------------------------------
 
-void UpdateSaucer()
+void UpdateCamera()
 {
-  DebugSetPhase(TEXT("UpdateSaucer"));
+  DebugSetPhase(TEXT("UpdateCamera"));
 
   if (_pPlayer == NULL) return;
 
 
   // Camera Tracking
   RECT rcPos = _pPlayer->GetPosition();
-  int saucerCenterX = rcPos.left + (rcPos.right - rcPos.left) / 2;
-  int saucerCenterY = rcPos.top + (rcPos.bottom - rcPos.top) / 2;
+  int playerCenterX = rcPos.left + (rcPos.right - rcPos.left) / 2;
+  int playerCenterY = rcPos.top + (rcPos.bottom - rcPos.top) / 2;
 
-  _iCameraX = saucerCenterX - (1280 / 2);
-  _iCameraY = saucerCenterY - (720 / 2);
+  _iCameraX = playerCenterX - (1280 / 2);
+  _iCameraY = playerCenterY - (720 / 2);
 
   int worldSize = 51 * TILE_SIZE; 
   if (_iCameraX < 0) _iCameraX = 0;

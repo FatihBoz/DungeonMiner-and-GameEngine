@@ -43,7 +43,6 @@ GameEngine*       _pGame;
 HDC               _hOffscreenDC;
 HBITMAP           _hOffscreenBitmap;
 Bitmap*           _pAsteroidBitmap;
-Bitmap*           _pSaucerBitmap;
 // enemies bitmap
 Bitmap*           _pGhostBitmap;
 Bitmap*				_pBatBitmap;
@@ -72,7 +71,7 @@ extern std::vector<FloatingText> _vFloatingTexts;
 //-----------------------------------------------------------------
 // Function Declarations
 //-----------------------------------------------------------------
-void UpdateSaucer();
+void UpdateCamera();
 void AddFloatingText(int x, int y, const TCHAR* szText, COLORREF color);
 void DescendLevel();
 void RestartGame();

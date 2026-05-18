@@ -18,4 +18,3 @@ IDI_ROIDS_SM        ICON         "DungeonMiner_sm.ico"
 // Bitmaps
 //-----------------------------------------------------------------
 IDB_ASTEROID        BITMAP       "bitmaps\\Asteroid.bmp"
-IDB_SAUCER          BITMAP       "bitmaps\\Saucer.bmp"

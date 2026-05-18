@@ -145,7 +145,6 @@
     <Image Include="bitmaps\skeleton.bmp" />
     <Image Include="DungeonMiner.ico" />
     <Image Include="DungeonMiner_sm.ico" />
-    <Image Include="bitmaps\Saucer.bmp" />
     <Image Include="bitmaps\Asteroid.bmp" />
   </ItemGroup>
   <ItemGroup>
