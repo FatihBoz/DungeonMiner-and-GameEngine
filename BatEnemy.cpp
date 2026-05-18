@@ -98,7 +98,7 @@ void BatEnemy::OnTouchPlayer(Player* pPlayer)
   RECT rcPlayer = pPlayer->GetPosition();
   int x = rcPlayer.left + (rcPlayer.right - rcPlayer.left) / 2 - 28;
   int y = rcPlayer.top - 24;
-  AddFloatingText(x, y, TEXT("-1 BAT"), RGB(255, 70, 70));
+  AddFloatingText(x, y, TEXT("-1 Player"), RGB(255, 70, 70));
 }
 
 POINT BatEnemy::CreateRandomPointNearHome() const

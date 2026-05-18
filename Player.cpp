@@ -1,6 +1,7 @@
 #include "Player.h"
 #include "Enemy.h"
 #include "ProceduralMapGeneration.h"
+#include <mmsystem.h>
 #include <vector>
 
 #define TILE_SIZE 64
@@ -9,7 +10,8 @@
 
 Player::Player(Bitmap* pBitmaps[4], RECT& rcBounds, BOUNDSACTION baBoundsAction)
   : Sprite(pBitmaps[0], rcBounds, baBoundsAction), m_iSpeed(8), m_iHealth(MAX_HEALTH),
-    m_iCurrentDir(PDIR_DOWN), m_bIsMoving(FALSE), m_bIsAttacking(FALSE), m_dScale(2.0)
+    m_iCurrentDir(PDIR_DOWN), m_bIsMoving(FALSE), m_bIsAttacking(FALSE),
+    m_iLastFootstepFrame(-1), m_dScale(2.0)
 {
   // Store all 4 directional bitmaps and initialize attack storage
   for (int i = 0; i < 4; i++)
@@ -124,6 +126,8 @@ void Player::Damage(int iDamage)
   if (m_iHealth < 0)
     m_iHealth = 0;
 
+  PlaySound(TEXT("Sounds\\playergetdamage.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
+
   extern void AddFloatingText(int x, int y, const TCHAR* szText, COLORREF color);
 
   RECT rc = GetPosition();
@@ -146,6 +150,9 @@ void Player::Heal(int iAmount)
 
 SPRITEACTION Player::Update()
 {
+  int iPreviousFrame = m_iCurFrame;
+  BOOL bWasMoving = m_bIsMoving && !m_bIsAttacking;
+
   if (m_bIsAttacking)
   {
     // Wait for the 5th attack frame (index 4) to finish playing
@@ -179,7 +186,21 @@ SPRITEACTION Player::Update()
   }
 
   // Call base class update to execute motion & bounds enforcement logic
-  return Sprite::Update();
+  SPRITEACTION sa = Sprite::Update();
+
+  if (bWasMoving && iPreviousFrame != m_iCurFrame &&
+    (m_iCurFrame == 1 || m_iCurFrame == 3) &&
+    m_iLastFootstepFrame != m_iCurFrame)
+  {
+    PlaySound(TEXT("Sounds\\footstep.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
+    m_iLastFootstepFrame = m_iCurFrame;
+  }
+  else if (!bWasMoving)
+  {
+    m_iLastFootstepFrame = -1;
+  }
+
+  return sa;
 }
 
 void Player::SetScale(double dScale)
@@ -252,6 +273,7 @@ void Player::ExecuteAttackDamage()
     RECT rcEnemy = pEnemy->GetCollision();
     if (IntersectRect(&rcHit, &rcAttack, &rcEnemy))
     {
+      PlaySound(TEXT("Sounds\\sword-unsheathe.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
       pEnemy->Damage(1);
 
       extern void AddFloatingText(int x, int y, const TCHAR* szText, COLORREF color);
@@ -270,6 +292,8 @@ void Player::ExecuteAttackDamage()
   int tileVal = _pMap->GetTile(r, c);
   if (tileVal >= 1 && tileVal <= 5)
   {
+    PlaySound(TEXT("Sounds\\hitmine.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
+
     // Center the text over the specific Ore tile being struck
     int textX = c * TILE_SIZE + (TILE_SIZE / 4);
     int textY = r * TILE_SIZE + (TILE_SIZE / 4);

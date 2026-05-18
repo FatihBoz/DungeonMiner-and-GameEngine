@@ -75,7 +75,7 @@ void GhostEnemy::OnTouchPlayer(Player* pPlayer)
   RECT rcPlayer = pPlayer->GetPosition();
   int x = rcPlayer.left + (rcPlayer.right - rcPlayer.left) / 2 - 36;
   int y = rcPlayer.top - 32;
-  AddFloatingText(x, y, TEXT("-1 GHOST"), RGB(170, 220, 255));
+  AddFloatingText(x, y, TEXT("-1 Player"), RGB(170, 220, 255));
 }
 
 POINT GhostEnemy::CreateRandomPointNearHome() const

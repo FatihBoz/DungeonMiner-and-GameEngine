@@ -21,6 +21,7 @@ private:
   PlayerDirection  m_iCurrentDir;
   BOOL             m_bIsMoving;
   BOOL             m_bIsAttacking;
+  int              m_iLastFootstepFrame;
   double           m_dScale; // Player scaling factor
   Inventory        m_inventory; // Player inventory tracking items
 

@@ -9,6 +9,7 @@
 #include "Roids.h"
 #include <cmath>
 #include <cstdlib>
+#include <mmsystem.h>
 
 #pragma comment(lib, "Msimg32.lib")
 
@@ -332,6 +333,7 @@ void SpawnSkeletonProjectile(POINT ptStart, POINT ptTarget)
   SkeletonProjectile* pShot = new SkeletonProjectile(pProjectileBitmap, ptStart, ptTarget, rcWorldBounds);
   pShot->SetZOrder(2);
   _pGame->AddSprite(pShot);
+  PlaySound(TEXT("Sounds\\swing.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
   DebugLogFormat(TEXT("spawn SkeletonProjectile sprite=0x%p start=(%ld,%ld) target=(%ld,%ld)"),
     pShot, ptStart.x, ptStart.y, ptTarget.x, ptTarget.y);
 }
@@ -973,6 +975,7 @@ void HandleKeys()
       if (_pMap != NULL && _pMap->GetTile(r, c) == 6)
       {
         DebugLogFormat(TEXT("stairs trigger tile=(%d,%d)"), r, c);
+        PlaySound(TEXT("Sounds\\ladder.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
         DescendLevel();
       }
     }
