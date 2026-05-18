@@ -196,7 +196,7 @@
 				>
 			</File>
 			<File
-				RelativePath="Roids.cpp"
+				RelativePath="DungeonMiner.cpp"
 				>
 			</File>
 			<File
@@ -225,7 +225,7 @@
 				>
 			</File>
 			<File
-				RelativePath="Roids.h"
+				RelativePath="DungeonMiner.h"
 				>
 			</File>
 			<File
@@ -238,15 +238,15 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
 			>
 			<File
-				RelativePath="Roids.ico"
+				RelativePath="DungeonMiner.ico"
 				>
 			</File>
 			<File
-				RelativePath="Roids.rc"
+				RelativePath="DungeonMiner.rc"
 				>
 			</File>
 			<File
-				RelativePath="Roids_sm.ico"
+				RelativePath="DungeonMiner_sm.ico"
 				>
 			</File>
 		</Filter>

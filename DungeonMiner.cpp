@@ -1,12 +1,12 @@
 //-----------------------------------------------------------------
 // Roids 2 Application
-// C++ Source - Roids.cpp
+// C++ Source - DungeonMiner.cpp
 //-----------------------------------------------------------------
 
 //-----------------------------------------------------------------
 // Include Files
 //-----------------------------------------------------------------
-#include "Roids.h"
+#include "DungeonMiner.h"
 #include <cmath>
 #include <cstdlib>
 #include <mmsystem.h>

@@ -64,9 +64,9 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>winmm.lib;msimg32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)Roids 2.exe</OutputFile>
+      <OutputFile>$(OutDir)DungeonMiner.exe</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ProgramDatabaseFile>$(OutDir)Roids 2.pdb</ProgramDatabaseFile>
+      <ProgramDatabaseFile>$(OutDir)DungeonMiner.pdb</ProgramDatabaseFile>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
@@ -86,7 +86,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>winmm.lib;msimg32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)Roids 2.exe</OutputFile>
+      <OutputFile>$(OutDir)DungeonMiner.exe</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -108,7 +108,7 @@
     <ClCompile Include="SkeletonProjectileMath.cpp" />
     <ClCompile Include="TankGolemEnemy.cpp" />
     <ClCompile Include="ProceduralMapGeneration.cpp" />
-    <ClCompile Include="Roids.cpp" />
+    <ClCompile Include="DungeonMiner.cpp" />
     <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="LightMask.cpp" />
@@ -128,7 +128,7 @@
     <ClInclude Include="TankGolemEnemy.h" />
     <ClInclude Include="ProceduralMapGeneration.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="Roids.h" />
+    <ClInclude Include="DungeonMiner.h" />
     <ClInclude Include="Sprite.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="LightMask.h" />
@@ -143,13 +143,13 @@
     <Image Include="bitmaps\ObsidianOre.bmp" />
     <Image Include="bitmaps\RubyOre.bmp" />
     <Image Include="bitmaps\skeleton.bmp" />
-    <Image Include="Roids.ico" />
-    <Image Include="Roids_sm.ico" />
+    <Image Include="DungeonMiner.ico" />
+    <Image Include="DungeonMiner_sm.ico" />
     <Image Include="bitmaps\Saucer.bmp" />
     <Image Include="bitmaps\Asteroid.bmp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Roids.rc" />
+    <ResourceCompile Include="DungeonMiner.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -4,21 +4,21 @@
 
 This repository contains a small Win32 C++ game and engine prototype. Core source files live at the repository root:
 
-- `Roids.cpp` / `Roids.h`: application entry points, game lifecycle hooks, and gameplay glue.
+- `DungeonMiner.cpp` / `DungeonMiner.h`: application entry points, game lifecycle hooks, and gameplay glue.
 - `GameEngine.*`, `Sprite.*`, `Bitmap.*`, `Background.*`: reusable engine primitives.
 - `Player.*`, `ProceduralMapGeneration.*`, `LightMask.*`, `Inventory.h`: dungeon gameplay systems.
 - `bitmaps/`: runtime bitmap assets, including ore, tileset, stairs, and player animation frames.
-- `Roids.rc`, `Resource.h`, `Roids.ico`, `Roids_sm.ico`: Windows resources.
+- `DungeonMiner.rc`, `Resource.h`, `DungeonMiner.ico`, `DungeonMiner_sm.ico`: Windows resources.
 
-The Visual Studio solution is `Roids 2.sln`; the active project file is `Roids 2.vcxproj`.
+The Visual Studio solution is `DungeonMiner.sln`; the active project file is `DungeonMiner.vcxproj`.
 
 ## Build, Test, and Development Commands
 
 Use a Visual Studio Developer PowerShell or Developer Command Prompt with the MSVC toolchain available.
 
-- `msbuild "Roids 2.sln" /p:Configuration=Debug /p:Platform=Win32` builds the debug executable into `Debug/`.
-- `msbuild "Roids 2.sln" /p:Configuration=Release /p:Platform=Win32` builds the release executable into `Release/`.
-- `devenv "Roids 2.sln"` opens the project in Visual Studio for debugging and resource inspection.
+- `msbuild "DungeonMiner.sln" /p:Configuration=Debug /p:Platform=Win32` builds the debug executable into `Debug/`.
+- `msbuild "DungeonMiner.sln" /p:Configuration=Release /p:Platform=Win32` builds the release executable into `Release/`.
+- `devenv "DungeonMiner.sln"` opens the project in Visual Studio for debugging and resource inspection.
 
 There is no package manager setup step. Generated build outputs such as `.obj`, `.lib`, `.dll`, and `.exe` should remain untracked.
 

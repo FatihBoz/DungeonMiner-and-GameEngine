@@ -51,7 +51,7 @@
     <ClCompile Include="TankGolemEnemy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Roids.cpp">
+    <ClCompile Include="DungeonMiner.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Sprite.cpp">
@@ -107,7 +107,7 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Roids.h">
+    <ClInclude Include="DungeonMiner.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Sprite.h">
@@ -124,10 +124,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Roids.ico">
+    <Image Include="DungeonMiner.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="Roids_sm.ico">
+    <Image Include="DungeonMiner_sm.ico">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="bitmaps\skeleton.bmp">
@@ -138,7 +138,7 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Roids.rc">
+    <ResourceCompile Include="DungeonMiner.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
