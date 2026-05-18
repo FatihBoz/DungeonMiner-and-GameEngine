@@ -23,6 +23,15 @@ public:
     }
   }
 
+  void RemoveItem(int itemType, int count = 1)
+  {
+    if (itemType >= 1 && itemType <= 8)
+    {
+      m_iCounts[itemType - 1] -= count;
+      if (m_iCounts[itemType - 1] < 0) m_iCounts[itemType - 1] = 0;
+    }
+  }
+
   int GetItemCount(int itemType) const
   {
     if (itemType >= 1 && itemType <= 8)

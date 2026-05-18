@@ -56,6 +56,7 @@ Player*           _pPlayer;
 Bitmap*           _pTilesetBitmap;
 Bitmap*           _pOreBitmaps[5];
 Bitmap*           _pStairsBitmap;
+Bitmap*           _pToolIconsBitmap;
 Bitmap*           _pPlayerBitmaps[4];       // 0: Down, 1: Left, 2: Right, 3: Up
 Bitmap*           _pPlayerAttackBitmaps[4]; // Attack: Down, Left, Right, Up
 ProceduralMapGeneration* _pMap;

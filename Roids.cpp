@@ -501,6 +501,7 @@ void GameStart(HWND hWindow)
   _pSaucerBitmap = new Bitmap(hDC, IDB_SAUCER, _hInstance);
   _pTilesetBitmap = new Bitmap(hDC, TEXT("bitmaps/DungeonTileset.bmp"));
   _pStairsBitmap = new Bitmap(hDC, TEXT("bitmaps/stairs.bmp"));
+  _pToolIconsBitmap = new Bitmap(hDC, TEXT("bitmaps/sword_pickaxe_icons.bmp"));
 
   // enemies
   _pGhostBitmap = new Bitmap(hDC, TEXT("bitmaps/ghost.bmp"));
@@ -598,6 +599,8 @@ static void CleanupGameResources(BOOL bDeleteGameEngine)
   _pTilesetBitmap = NULL;
   delete _pStairsBitmap;
   _pStairsBitmap = NULL;
+  delete _pToolIconsBitmap;
+  _pToolIconsBitmap = NULL;
 
   // enemies
   delete _pGhostBitmap;
@@ -868,6 +871,131 @@ void GamePaint(HDC hDC)
       }
     }
 
+    // --- RENDER TOOL BARS (LEFT ALIGNED) ---
+    int toolHudX = 15;
+    int toolHudY = screenH - barHeight - 15;
+
+    for (int i = 0; i < 2; i++)
+    {
+      int xLeft = toolHudX + i * (barWidth + spacing);
+      int xRight = xLeft + barWidth;
+      int yTop = toolHudY;
+      int yBottom = toolHudY + barHeight;
+
+      // Draw the tool background, highlighted if active
+      if (_pPlayer->GetActiveTool() == i)
+      {
+        HPEN hHighlightPen = CreatePen(PS_SOLID, 3, RGB(255, 215, 0)); // Golden/Yellow border
+        HPEN hOldPen2 = (HPEN)SelectObject(hDC, hHighlightPen);
+        RoundRect(hDC, xLeft, yTop, xRight, yBottom, 8, 8);
+        SelectObject(hDC, hOldPen2);
+        DeleteObject(hHighlightPen);
+      }
+      else
+      {
+        RoundRect(hDC, xLeft, yTop, xRight, yBottom, 8, 8);
+      }
+
+      if (_pToolIconsBitmap != NULL)
+      {
+        int iconSize = 30;
+        int iconX = xLeft + (barWidth - iconSize) / 2;
+        int iconY = yTop + (barHeight - iconSize) / 2;
+        
+        // Image contains 2 icons (60x30), take 30x30 chunks
+        int srcX = i * 30;
+        _pToolIconsBitmap->DrawPartScaled(hDC, iconX, iconY, iconSize, iconSize, srcX, 0, 30, 30, TRUE);
+      }
+
+      // Draw durability text above the box
+      TCHAR szDurability[32];
+      wsprintf(szDurability, TEXT("%d/%d"), _pPlayer->GetToolDurability(i), _pPlayer->GetMaxToolDurability(i));
+      
+      int durX = xLeft + (barWidth / 2);
+      int durY = yTop - 18;
+
+      UINT oldAlign2 = SetTextAlign(hDC, TA_CENTER | TA_TOP);
+
+      SetTextColor(hDC, RGB(0, 0, 0));
+      TextOut(hDC, durX + 1, durY + 1, szDurability, lstrlen(szDurability));
+
+      if (_pPlayer->GetToolDurability(i) == 0)
+         SetTextColor(hDC, RGB(255, 60, 60)); // red if broken
+      else
+         SetTextColor(hDC, RGB(200, 200, 200)); // light gray
+
+      TextOut(hDC, durX, durY, szDurability, lstrlen(szDurability));
+
+      SetTextAlign(hDC, oldAlign2);
+
+      // --- UPGRADE BUTTON ---
+      int btnTop = yTop - 65;
+      int btnBottom = yTop - 45;
+      
+      int level = _pPlayer->GetToolLevel(i);
+      if (level < 5)
+      {
+        int cost = 30;
+        for (int c = 1; c < level; c++) cost = (int)(cost * 2.5);
+
+        HBRUSH hBtnBrush = CreateSolidBrush(RGB(50, 150, 50));
+        HBRUSH hOldBtnBrush = (HBRUSH)SelectObject(hDC, hBtnBrush);
+        RoundRect(hDC, xLeft, btnTop, xRight, btnBottom, 4, 4);
+        SelectObject(hDC, hOldBtnBrush);
+        DeleteObject(hBtnBrush);
+
+        TCHAR szUpg[32];
+        wsprintf(szUpg, TEXT("UPG (%d)"), cost);
+        
+        UINT oldAlign3 = SetTextAlign(hDC, TA_CENTER | TA_TOP);
+        SetTextColor(hDC, RGB(0, 0, 0));
+        TextOut(hDC, durX + 1, btnTop + 3, szUpg, lstrlen(szUpg));
+        SetTextColor(hDC, RGB(255, 255, 255));
+        TextOut(hDC, durX, btnTop + 2, szUpg, lstrlen(szUpg));
+        SetTextAlign(hDC, oldAlign3);
+      }
+      // ----------------------
+
+      // --- MATERIAL TEXT ---
+      const TCHAR* szMaterial = TEXT("Unknown");
+      switch (level)
+      {
+         case 1: szMaterial = TEXT("Iron"); break;
+         case 2: szMaterial = TEXT("Amethyst"); break;
+         case 3: szMaterial = TEXT("Gold"); break;
+         case 4: szMaterial = TEXT("Ruby"); break;
+         case 5: szMaterial = TEXT("Obsidian"); break;
+      }
+      
+      int matY = yTop - 36;
+      UINT oldAlignMat = SetTextAlign(hDC, TA_CENTER | TA_TOP);
+      SetTextColor(hDC, RGB(0, 0, 0));
+      TextOut(hDC, durX + 1, matY + 1, szMaterial, lstrlen(szMaterial));
+      SetTextColor(hDC, RGB(200, 200, 255));
+      TextOut(hDC, durX, matY, szMaterial, lstrlen(szMaterial));
+      SetTextAlign(hDC, oldAlignMat);
+      // ----------------------
+
+      // Render count text with high-visibility drop shadow pushed precisely to the bottom-right corner
+      TCHAR szNum[16];
+      wsprintf(szNum, TEXT("%d"), i + 1);
+      
+      int textX = xRight - 5;
+      int textY = yBottom - 2;
+
+      UINT oldAlign = SetTextAlign(hDC, TA_RIGHT | TA_BOTTOM);
+
+      // Render drop shadow (black offset)
+      SetTextColor(hDC, RGB(0, 0, 0));
+      TextOut(hDC, textX + 1, textY + 1, szNum, lstrlen(szNum));
+
+      // Render foreground text (white)
+      SetTextColor(hDC, RGB(255, 255, 255));
+      TextOut(hDC, textX, textY, szNum, lstrlen(szNum));
+
+      SetTextAlign(hDC, oldAlign);
+    }
+
     // Proper GDI cleanup
     SelectObject(hDC, hOldPen);
     SelectObject(hDC, hOldBrush);
@@ -985,6 +1113,42 @@ void HandleKeys()
 
 void MouseButtonDown(int x, int y, BOOL bLeft)
 {
+  if (_pPlayer != NULL && _pGame != NULL && bLeft)
+  {
+    int screenW = _pGame->GetWidth();
+    int screenH = _pGame->GetHeight();
+    const int barWidth = 56;
+    const int barHeight = 56;
+    const int spacing = 8;
+    int toolHudX = 15;
+    int toolHudY = screenH - barHeight - 15;
+
+    for (int i = 0; i < 2; i++)
+    {
+      int xLeft = toolHudX + i * (barWidth + spacing);
+      int xRight = xLeft + barWidth;
+      int btnTop = toolHudY - 65;
+      int btnBottom = toolHudY - 45;
+
+      if (x >= xLeft && x <= xRight && y >= btnTop && y <= btnBottom)
+      {
+        int level = _pPlayer->GetToolLevel(i);
+        if (level < 5)
+        {
+          int nextLevel = level + 1;
+          int cost = 30;
+          for (int c = 1; c < level; c++) cost = (int)(cost * 2.5);
+
+          if (_pPlayer->GetInventory().GetItemCount(nextLevel) >= cost)
+          {
+            _pPlayer->GetInventory().RemoveItem(nextLevel, cost);
+            _pPlayer->UpgradeTool(i);
+            PlaySound(TEXT("Sounds\\pickup.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
+          }
+        }
+      }
+    }
+  }
 }
 
 void MouseButtonUp(int x, int y, BOOL bLeft)

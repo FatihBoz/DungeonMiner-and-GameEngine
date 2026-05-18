@@ -57,6 +57,38 @@ void LightMask::Draw(HDC hDC, int centerX, int centerY, int viewW, int viewH)
   int destX = centerX - (renderSize / 2);
   int destY = centerY - (renderSize / 2);
 
+  // Get current viewport origin to know which regions are visible
+  POINT ptOrg;
+  GetWindowOrgEx(hDC, &ptOrg);
+
+  int camX = ptOrg.x;
+  int camY = ptOrg.y;
+  int camRight = camX + viewW;
+  int camBottom = camY + viewH;
+
+  HBRUSH hBlackBrush = (HBRUSH)GetStockObject(BLACK_BRUSH);
+
+  // Top rect
+  if (destY > camY) {
+      RECT r = { camX, camY, camRight, destY };
+      FillRect(hDC, &r, hBlackBrush);
+  }
+  // Bottom rect
+  if (destY + renderSize < camBottom) {
+      RECT r = { camX, destY + renderSize, camRight, camBottom };
+      FillRect(hDC, &r, hBlackBrush);
+  }
+  // Left rect (between top and bottom bounds of destY)
+  if (destX > camX) {
+      RECT r = { camX, max(camY, destY), destX, min(camBottom, destY + renderSize) };
+      FillRect(hDC, &r, hBlackBrush);
+  }
+  // Right rect
+  if (destX + renderSize < camRight) {
+      RECT r = { destX + renderSize, max(camY, destY), camRight, min(camBottom, destY + renderSize) };
+      FillRect(hDC, &r, hBlackBrush);
+  }
+
   BLENDFUNCTION blend = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
 
   HDC hMemDC = CreateCompatibleDC(hDC);

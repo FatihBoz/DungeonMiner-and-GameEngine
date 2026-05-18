@@ -11,8 +11,16 @@
 Player::Player(Bitmap* pBitmaps[4], RECT& rcBounds, BOUNDSACTION baBoundsAction)
   : Sprite(pBitmaps[0], rcBounds, baBoundsAction), m_iSpeed(8), m_iHealth(MAX_HEALTH),
     m_iCurrentDir(PDIR_DOWN), m_bIsMoving(FALSE), m_bIsAttacking(FALSE),
-    m_iLastFootstepFrame(-1), m_dScale(2.0)
+    m_iLastFootstepFrame(-1), m_dScale(2.0), m_iActiveTool(0)
 {
+  // Initialize Tool Durability and Levels
+  m_iMaxToolDurability[0] = MAX_TOOL_DURABILITY;
+  m_iMaxToolDurability[1] = MAX_TOOL_DURABILITY;
+  m_iToolDurability[0] = MAX_TOOL_DURABILITY;
+  m_iToolDurability[1] = MAX_TOOL_DURABILITY;
+  m_iToolLevel[0] = 1; // Starts at Iron (1)
+  m_iToolLevel[1] = 1; // Starts at Iron (1)
+
   // Store all 4 directional bitmaps and initialize attack storage
   for (int i = 0; i < 4; i++)
   {
@@ -42,6 +50,21 @@ void Player::HandleKeys()
     SetVelocity(0, 0);
     return;
   }
+
+  // Handle active tool switching (1 = Pickaxe, 2 = Sword)
+  if (GetAsyncKeyState('1') < 0)
+    m_iActiveTool = 0;
+  else if (GetAsyncKeyState('2') < 0)
+    m_iActiveTool = 1;
+
+  // Handle Repair with 'R'
+  static bool s_bRKeyLatch = false;
+  bool bRIsDown = (GetAsyncKeyState('R') & 0x8000) != 0;
+  if (bRIsDown && !s_bRKeyLatch)
+  {
+    RepairActiveTool();
+  }
+  s_bRKeyLatch = bRIsDown;
 
   // Lock user inputs and stop speed during an active attack swing
   if (m_bIsAttacking)
@@ -273,13 +296,20 @@ void Player::ExecuteAttackDamage()
     RECT rcEnemy = pEnemy->GetCollision();
     if (IntersectRect(&rcHit, &rcAttack, &rcEnemy))
     {
-      PlaySound(TEXT("Sounds\\sword-unsheathe.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
-      pEnemy->Damage(1);
+      if (m_iActiveTool == 1 && m_iToolDurability[1] > 0) // Only sword with durability damages enemies
+      {
+        m_iToolDurability[1]--; // Decrease sword durability
+        PlaySound(TEXT("Sounds\\sword-unsheathe.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
+        int damageDealt = m_iToolLevel[1];
+        pEnemy->Damage(damageDealt);
 
-      extern void AddFloatingText(int x, int y, const TCHAR* szText, COLORREF color);
-      int textX = rcEnemy.left + (rcEnemy.right - rcEnemy.left) / 2 - 16;
-      int textY = rcEnemy.top - 20;
-      AddFloatingText(textX, textY, TEXT("-1"), RGB(255, 230, 80));
+        extern void AddFloatingText(int x, int y, const TCHAR* szText, COLORREF color);
+        int textX = rcEnemy.left + (rcEnemy.right - rcEnemy.left) / 2 - 16;
+        int textY = rcEnemy.top - 20;
+        TCHAR szDmg[16];
+        wsprintf(szDmg, TEXT("-%d"), damageDealt);
+        AddFloatingText(textX, textY, szDmg, RGB(255, 230, 80));
+      }
       return;
     }
   }
@@ -292,33 +322,62 @@ void Player::ExecuteAttackDamage()
   int tileVal = _pMap->GetTile(r, c);
   if (tileVal >= 1 && tileVal <= 5)
   {
-    PlaySound(TEXT("Sounds\\hitmine.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
-
-    // Center the text over the specific Ore tile being struck
-    int textX = c * TILE_SIZE + (TILE_SIZE / 4);
-    int textY = r * TILE_SIZE + (TILE_SIZE / 4);
-
-    // Extern declaration for the safe global text factory
-    extern void AddFloatingText(int x, int y, const TCHAR* szText, COLORREF color);
-
-    // Map the tile value to its corresponding display name
-    const TCHAR* szOreName = TEXT("Ore");
-    switch (tileVal)
+    if (m_iActiveTool == 0 && m_iToolDurability[0] > 0) // Only pickaxe with durability mines ores
     {
-      case 1: szOreName = TEXT("Iron"); break;
-      case 2: szOreName = TEXT("Amethyst"); break;
-      case 3: szOreName = TEXT("Gold"); break;
-      case 4: szOreName = TEXT("Ruby"); break;
-      case 5: szOreName = TEXT("Obsidian"); break;
+      m_iToolDurability[0]--; // Decrease pickaxe durability
+      PlaySound(TEXT("Sounds\\hitmine.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
+
+      // Center the text over the specific Ore tile being struck
+      int textX = c * TILE_SIZE + (TILE_SIZE / 4);
+      int textY = r * TILE_SIZE + (TILE_SIZE / 4);
+
+      // Extern declaration for the safe global text factory
+      extern void AddFloatingText(int x, int y, const TCHAR* szText, COLORREF color);
+
+      // Map the tile value to its corresponding display name
+      const TCHAR* szOreName = TEXT("Ore");
+      switch (tileVal)
+      {
+        case 1: szOreName = TEXT("Iron"); break;
+        case 2: szOreName = TEXT("Amethyst"); break;
+        case 3: szOreName = TEXT("Gold"); break;
+        case 4: szOreName = TEXT("Ruby"); break;
+        case 5: szOreName = TEXT("Obsidian"); break;
+      }
+
+      // 5. Inflict persistent damage, add to inventory, and assess mineral status!
+      int damageDealt = m_iToolLevel[0];
+      _pMap->DamageOre(r, c, damageDealt);
+      m_inventory.AddItem(tileVal, damageDealt); // Record item directly to the inventory!
+
+      TCHAR szBuffer[32];
+      wsprintf(szBuffer, TEXT("+%d %s"), damageDealt, szOreName);
+      AddFloatingText(textX, textY, szBuffer, RGB(0, 255, 0)); // Green for collection success
     }
+  }
+}
 
-    // 5. Inflict persistent damage, add to inventory, and assess mineral status!
-    _pMap->DamageOre(r, c, 1);
-    m_inventory.AddItem(tileVal, 1); // Record item directly to the inventory!
+void Player::RepairActiveTool()
+{
+  int maxDur = m_iMaxToolDurability[m_iActiveTool];
+  int missing = maxDur - m_iToolDurability[m_iActiveTool];
+  if (missing <= 0) return; // Already full durability
 
-    TCHAR szBuffer[32];
-    wsprintf(szBuffer, TEXT("+1 %s"), szOreName);
-    AddFloatingText(textX, textY, szBuffer, RGB(0, 255, 0)); // Green for collection success
+  int level = m_iToolLevel[m_iActiveTool];
+
+  // Needs 1 ore per 5 durability.
+  int neededOres = (missing + 4) / 5; // ceil(missing / 5.0)
+  int availableOres = m_inventory.GetItemCount(level); // The ore id corresponds to the level (1=Iron, 2=Amethyst, etc.)
+
+  if (availableOres > 0)
+  {
+    int oresToUse = min(neededOres, availableOres);
+    m_inventory.RemoveItem(level, oresToUse);
+    m_iToolDurability[m_iActiveTool] += oresToUse * 5;
+    if (m_iToolDurability[m_iActiveTool] > maxDur)
+      m_iToolDurability[m_iActiveTool] = maxDur;
+
+    PlaySound(TEXT("Sounds\\pickup.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
   }
 }
 
